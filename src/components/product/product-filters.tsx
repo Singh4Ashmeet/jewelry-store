@@ -1,16 +1,18 @@
-"use client";
+'use client';
 
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import type { ProductFilterInput, ProductSort } from "@/lib/product-query";
-import { gemstoneOptions } from "@/lib/product-query";
-import { METAL_LABELS, type MetalType } from "@/types";
+import { useMemo, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { SlidersHorizontal, X } from 'lucide-react';
+import type { ProductFilterInput, ProductSort } from '@/lib/product-query';
+import { gemstoneOptions } from '@/lib/product-query';
+import { METAL_LABELS, type MetalType } from '@/types';
 
-const metals: MetalType[] = ["YELLOW_GOLD", "ROSE_GOLD", "WHITE_GOLD", "PLATINUM", "SILVER"];
+const metals: MetalType[] = ['YELLOW_GOLD', 'ROSE_GOLD', 'WHITE_GOLD', 'PLATINUM', 'SILVER'];
 const sortOptions: { value: ProductSort; label: string }[] = [
-  { value: "popular", label: "Popularity" },
-  { value: "price-asc", label: "Price low to high" },
-  { value: "price-desc", label: "Price high to low" },
-  { value: "newest", label: "Newest first" },
+  { value: 'popular', label: 'Popularity' },
+  { value: 'price-asc', label: 'Price low to high' },
+  { value: 'price-desc', label: 'Price high to low' },
+  { value: 'newest', label: 'Newest first' },
 ];
 
 function updateList(values: string[] | undefined, value: string, checked: boolean) {
@@ -24,120 +26,228 @@ export function ProductFilters({ initialFilters }: { initialFilters: ProductFilt
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const [draft, setDraft] = useState<ProductFilterInput>(initialFilters);
+  const activeFilterCount = useMemo(() => {
+    return [
+      draft.minPrice !== undefined,
+      draft.maxPrice !== undefined,
+      Boolean(draft.metals?.length),
+      Boolean(draft.gemstones?.length),
+      draft.inStock,
+      draft.onSale,
+    ].filter(Boolean).length;
+  }, [draft]);
 
-  function commit(next: Partial<ProductFilterInput>) {
+  function commit(nextFilters = draft) {
     const params = new URLSearchParams(searchParams.toString());
     const setOrDelete = (key: string, value?: string | number | boolean) => {
-      if (value === undefined || value === "" || value === false) params.delete(key);
+      if (value === undefined || value === '' || value === false) params.delete(key);
       else params.set(key, String(value));
     };
 
-    setOrDelete("min", next.minPrice ?? initialFilters.minPrice);
-    setOrDelete("max", next.maxPrice ?? initialFilters.maxPrice);
-    setOrDelete("sort", next.sort ?? initialFilters.sort);
-    setOrDelete("stock", next.inStock ?? initialFilters.inStock ? "in" : undefined);
-    setOrDelete("sale", next.onSale ?? initialFilters.onSale ? "true" : undefined);
+    setOrDelete('min', nextFilters.minPrice);
+    setOrDelete('max', nextFilters.maxPrice);
+    setOrDelete('sort', nextFilters.sort === 'popular' ? undefined : nextFilters.sort);
+    setOrDelete('stock', nextFilters.inStock ? 'in' : undefined);
+    setOrDelete('sale', nextFilters.onSale ? 'true' : undefined);
 
-    const metalValues = next.metals ?? initialFilters.metals ?? [];
-    const gemstoneValues = next.gemstones ?? initialFilters.gemstones ?? [];
-    setOrDelete("metal", metalValues.join(","));
-    setOrDelete("gem", gemstoneValues.join(","));
+    const metalValues = nextFilters.metals ?? [];
+    const gemstoneValues = nextFilters.gemstones ?? [];
+    setOrDelete('metal', metalValues.join(','));
+    setOrDelete('gem', gemstoneValues.join(','));
 
     router.push(`${pathname}?${params.toString()}`, { scroll: false });
   }
 
+  function clearFilters() {
+    const params = new URLSearchParams(searchParams.toString());
+    ['min', 'max', 'metal', 'gem', 'stock', 'sale', 'sort'].forEach((key) => params.delete(key));
+    setDraft({ q: initialFilters.q, category: initialFilters.category, sort: 'popular' });
+    router.push(`${pathname}?${params.toString()}`, { scroll: false });
+  }
+
+  function setNumber(key: 'minPrice' | 'maxPrice', value: string) {
+    const parsed = Number(value);
+    setDraft((current) => ({
+      ...current,
+      [key]: Number.isFinite(parsed) && value !== '' ? parsed : undefined,
+    }));
+  }
+
   return (
-    <form className="grid gap-5 rounded-[8px] border border-[#EAE5DF] bg-white p-5 lg:grid-cols-[1fr_1.2fr_1fr]">
-      <fieldset>
-        <legend className="text-xs font-semibold uppercase tracking-[0.2em]">Price</legend>
-        <div className="mt-4 grid gap-3">
-          <label className="grid gap-2 text-sm">
-            Minimum
-            <input
-              type="range"
-              min="0"
-              max="10000"
-              step="100"
-              value={initialFilters.minPrice ?? 0}
-              onChange={(event) => commit({ minPrice: Number(event.target.value) })}
-              aria-label="Minimum price"
-            />
-          </label>
-          <label className="grid gap-2 text-sm">
-            Maximum
-            <input
-              type="range"
-              min="0"
-              max="10000"
-              step="100"
-              value={initialFilters.maxPrice ?? 10000}
-              onChange={(event) => commit({ maxPrice: Number(event.target.value) })}
-              aria-label="Maximum price"
-            />
-          </label>
-          <p className="text-xs text-[#6B6B68]">
-            {initialFilters.minPrice ?? 0} to {initialFilters.maxPrice ?? 10000}
-          </p>
+    <form
+      className="rounded-[8px] border border-[#EAE5DF] bg-white shadow-sm"
+      onSubmit={(event) => {
+        event.preventDefault();
+        commit();
+      }}
+    >
+      <div className="flex flex-col gap-4 border-b border-[#EAE5DF] p-5 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F5F1EB] text-[#A07840]">
+            <SlidersHorizontal size={18} aria-hidden="true" />
+          </span>
+          <div>
+            <h2 className="text-sm font-semibold tracking-[0.18em] uppercase">Refine Selection</h2>
+            <p className="mt-1 text-sm text-[#6B6B68]">
+              Filter by budget, material, gemstone, and availability.
+            </p>
+          </div>
         </div>
-      </fieldset>
-
-      <div className="grid gap-5 sm:grid-cols-2">
-        <fieldset>
-          <legend className="text-xs font-semibold uppercase tracking-[0.2em]">Metal</legend>
-          <div className="mt-3 grid gap-2">
-            {metals.map((metal) => (
-              <label key={metal} className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={initialFilters.metals?.includes(metal) ?? false}
-                  onChange={(event) => commit({ metals: updateList(initialFilters.metals, metal, event.target.checked) as MetalType[] })}
-                />
-                {METAL_LABELS[metal]}
-              </label>
-            ))}
-          </div>
-        </fieldset>
-
-        <fieldset>
-          <legend className="text-xs font-semibold uppercase tracking-[0.2em]">Gemstone</legend>
-          <div className="mt-3 grid gap-2">
-            {gemstoneOptions.map((gemstone) => (
-              <label key={gemstone} className="flex items-center gap-2 text-sm capitalize">
-                <input
-                  type="checkbox"
-                  checked={initialFilters.gemstones?.includes(gemstone) ?? false}
-                  onChange={(event) => commit({ gemstones: updateList(initialFilters.gemstones, gemstone, event.target.checked) })}
-                />
-                {gemstone}
-              </label>
-            ))}
-          </div>
-        </fieldset>
+        <div className="flex flex-wrap items-center gap-3">
+          {activeFilterCount > 0 && (
+            <span className="rounded-full bg-[#F5F1EB] px-3 py-1 text-xs text-[#6B6B68]">
+              {activeFilterCount} active
+            </span>
+          )}
+          <button
+            className="inline-flex h-10 items-center gap-2 border border-[#EAE5DF] px-4 text-xs font-semibold tracking-[0.16em] uppercase"
+            type="button"
+            onClick={clearFilters}
+          >
+            <X size={14} />
+            Clear
+          </button>
+          <button
+            className="h-10 bg-[#1C1C1A] px-5 text-xs font-semibold tracking-[0.16em] text-white uppercase"
+            type="submit"
+          >
+            Apply Filters
+          </button>
+        </div>
       </div>
 
-      <div className="grid gap-4">
-        <label className="grid gap-2 text-sm">
-          Sort
-          <select
-            className="border border-[#EAE5DF] bg-white px-3 py-2"
-            value={initialFilters.sort ?? "popular"}
-            onChange={(event) => commit({ sort: event.target.value as ProductSort })}
-          >
-            {sortOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={initialFilters.inStock ?? false} onChange={(event) => commit({ inStock: event.target.checked })} />
-          In stock
-        </label>
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={initialFilters.onSale ?? false} onChange={(event) => commit({ onSale: event.target.checked })} />
-          On sale
-        </label>
+      <div className="grid gap-0 lg:grid-cols-[1fr_1.3fr_1fr]">
+        <fieldset className="border-b border-[#EAE5DF] p-5 lg:border-r lg:border-b-0">
+          <legend className="text-xs font-semibold tracking-[0.2em] uppercase">Price Range</legend>
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <label className="grid gap-2 text-sm text-[#6B6B68]">
+              Min
+              <input
+                type="number"
+                min="0"
+                step="100"
+                value={draft.minPrice ?? ''}
+                onChange={(event) => setNumber('minPrice', event.target.value)}
+                className="h-11 border border-[#EAE5DF] bg-[#FCFAF8] px-3 text-[#1C1C1A] outline-none focus:border-[#B58E62]"
+                placeholder="0"
+              />
+            </label>
+            <label className="grid gap-2 text-sm text-[#6B6B68]">
+              Max
+              <input
+                type="number"
+                min="0"
+                step="100"
+                value={draft.maxPrice ?? ''}
+                onChange={(event) => setNumber('maxPrice', event.target.value)}
+                className="h-11 border border-[#EAE5DF] bg-[#FCFAF8] px-3 text-[#1C1C1A] outline-none focus:border-[#B58E62]"
+                placeholder="10000"
+              />
+            </label>
+          </div>
+          <p className="mt-3 text-xs text-[#6B6B68]">
+            Use exact values for a cleaner, shareable result.
+          </p>
+        </fieldset>
+
+        <div className="grid gap-0 border-b border-[#EAE5DF] sm:grid-cols-2 lg:border-r lg:border-b-0">
+          <fieldset>
+            <legend className="px-5 pt-5 text-xs font-semibold tracking-[0.2em] uppercase">
+              Metal
+            </legend>
+            <div className="grid gap-1 p-5 pt-3">
+              {metals.map((metal) => (
+                <label key={metal} className="flex min-h-9 items-center gap-3 text-sm">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 accent-[#B58E62]"
+                    checked={draft.metals?.includes(metal) ?? false}
+                    onChange={(event) =>
+                      setDraft((current) => ({
+                        ...current,
+                        metals: updateList(
+                          current.metals,
+                          metal,
+                          event.target.checked,
+                        ) as MetalType[],
+                      }))
+                    }
+                  />
+                  {METAL_LABELS[metal]}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend className="px-5 pt-5 text-xs font-semibold tracking-[0.2em] uppercase">
+              Gemstone
+            </legend>
+            <div className="grid gap-1 p-5 pt-3">
+              {gemstoneOptions.map((gemstone) => (
+                <label
+                  key={gemstone}
+                  className="flex min-h-9 items-center gap-3 text-sm capitalize"
+                >
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 accent-[#B58E62]"
+                    checked={draft.gemstones?.includes(gemstone) ?? false}
+                    onChange={(event) =>
+                      setDraft((current) => ({
+                        ...current,
+                        gemstones: updateList(current.gemstones, gemstone, event.target.checked),
+                      }))
+                    }
+                  />
+                  {gemstone}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+        </div>
+
+        <div className="grid gap-4 p-5">
+          <label className="grid gap-2 text-sm">
+            <span className="text-xs font-semibold tracking-[0.2em] uppercase">Sort</span>
+            <select
+              className="h-11 border border-[#EAE5DF] bg-[#FCFAF8] px-3 outline-none focus:border-[#B58E62]"
+              value={draft.sort ?? 'popular'}
+              onChange={(event) =>
+                setDraft((current) => ({ ...current, sort: event.target.value as ProductSort }))
+              }
+            >
+              {sortOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex min-h-9 items-center gap-3 text-sm">
+            <input
+              className="h-4 w-4 accent-[#B58E62]"
+              type="checkbox"
+              checked={draft.inStock ?? false}
+              onChange={(event) =>
+                setDraft((current) => ({ ...current, inStock: event.target.checked }))
+              }
+            />
+            In stock
+          </label>
+          <label className="flex min-h-9 items-center gap-3 text-sm">
+            <input
+              className="h-4 w-4 accent-[#B58E62]"
+              type="checkbox"
+              checked={draft.onSale ?? false}
+              onChange={(event) =>
+                setDraft((current) => ({ ...current, onSale: event.target.checked }))
+              }
+            />
+            On sale
+          </label>
+        </div>
       </div>
     </form>
   );

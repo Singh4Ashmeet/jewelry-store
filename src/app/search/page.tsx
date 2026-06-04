@@ -29,7 +29,7 @@ export default async function SearchPage({ searchParams }: Props) {
         <h1 className="mt-3 font-display text-5xl">{filters.q ? `Results for "${filters.q}"` : "Search Aurelia"}</h1>
       </div>
 
-      <ProductFilters initialFilters={filters} />
+      <ProductFilters key={JSON.stringify(filters)} initialFilters={filters} />
 
       {filters.q && products.length === 0 && (
         <div className="mt-6">
