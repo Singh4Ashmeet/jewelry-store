@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import Image from "next/image";
-import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
-import { Search } from "lucide-react";
-import { formatPrice } from "@/lib/utils";
+import Image from 'next/image';
+import Link from 'next/link';
+import { useEffect, useRef, useState } from 'react';
+import { Search } from 'lucide-react';
+import { formatPrice } from '@/lib/utils';
 
 type SearchResult = {
   id: string;
@@ -16,7 +16,7 @@ type SearchResult = {
 };
 
 export function HeaderSearch() {
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
@@ -26,8 +26,8 @@ export function HeaderSearch() {
     const handleClick = (event: MouseEvent) => {
       if (!containerRef.current?.contains(event.target as Node)) setOpen(false);
     };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
   useEffect(() => {
@@ -45,7 +45,7 @@ export function HeaderSearch() {
           signal: controller.signal,
         });
         const payload = await response.json();
-        setResults(response.ok ? payload.products ?? [] : []);
+        setResults(response.ok ? (payload.products ?? []) : []);
       } catch {
         if (!controller.signal.aborted) setResults([]);
       } finally {
@@ -60,7 +60,7 @@ export function HeaderSearch() {
   }, [query]);
 
   return (
-    <div className="relative hidden min-w-64 lg:block" ref={containerRef}>
+    <div className="relative hidden w-56 lg:block xl:w-72" ref={containerRef}>
       <form action="/search" role="search">
         <label className="sr-only" htmlFor="site-search">
           Search jewellery
@@ -84,9 +84,11 @@ export function HeaderSearch() {
       </form>
 
       {open && query.trim().length >= 2 && (
-        <div className="absolute right-0 top-12 z-50 w-[360px] rounded-[6px] border border-[#EAE5DF] bg-white p-3 shadow-xl">
+        <div className="absolute top-12 right-0 z-50 w-[360px] rounded-[6px] border border-[#EAE5DF] bg-white p-3 shadow-xl">
           {loading && <p className="px-2 py-3 text-sm text-[#6B6B68]">Searching...</p>}
-          {!loading && results.length === 0 && <p className="px-2 py-3 text-sm text-[#6B6B68]">No products found.</p>}
+          {!loading && results.length === 0 && (
+            <p className="px-2 py-3 text-sm text-[#6B6B68]">No products found.</p>
+          )}
           <div className="space-y-2">
             {results.map((product) => (
               <Link
@@ -96,11 +98,15 @@ export function HeaderSearch() {
                 onClick={() => setOpen(false)}
               >
                 <div className="relative h-14 overflow-hidden rounded-[4px] bg-[#F5F1EB]">
-                  {product.image && <Image src={product.image} alt="" fill sizes="56px" className="object-cover" />}
+                  {product.image && (
+                    <Image src={product.image} alt="" fill sizes="56px" className="object-cover" />
+                  )}
                 </div>
                 <div>
                   <p className="text-sm font-medium">{product.name}</p>
-                  <p className="mt-1 text-xs uppercase tracking-[0.12em] text-[#737373]">{product.category}</p>
+                  <p className="mt-1 text-xs tracking-[0.12em] text-[#737373] uppercase">
+                    {product.category}
+                  </p>
                   <p className="mt-1 text-sm">{formatPrice(product.price)}</p>
                 </div>
               </Link>
@@ -108,7 +114,7 @@ export function HeaderSearch() {
           </div>
           <Link
             href={`/search?q=${encodeURIComponent(query)}`}
-            className="mt-3 block border-t border-[#EAE5DF] px-2 pt-3 text-xs font-semibold uppercase tracking-[0.18em] text-[#A07840]"
+            className="mt-3 block border-t border-[#EAE5DF] px-2 pt-3 text-xs font-semibold tracking-[0.18em] text-[#A07840] uppercase"
             onClick={() => setOpen(false)}
           >
             View all results
