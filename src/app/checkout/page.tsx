@@ -1,16 +1,19 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Button } from "@/components/common/button";
+import { ErrorAlert } from "@/components/common/error-alert";
 import { checkoutSchema, type CheckoutInput } from "@/lib/validations/checkout";
 import { useCartStore } from "@/store/cart-store";
 import { formatPrice } from "@/lib/utils";
 
 export default function CheckoutPage() {
   const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
   const { items, cartTotal, clearCart } = useCartStore();
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<CheckoutInput>({
     resolver: zodResolver(checkoutSchema),
@@ -18,18 +21,27 @@ export default function CheckoutPage() {
   });
 
   async function onSubmit(values: CheckoutInput) {
-    const response = await fetch("/api/checkout", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...values, items, total: cartTotal() }),
-    });
-    const order = await response.json();
-    if (!response.ok) {
-      toast.error(order.message ?? "Checkout failed");
-      return;
+    setError(null);
+    try {
+      const response = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...values, items, total: cartTotal() }),
+      });
+      const order = await response.json();
+      if (!response.ok) {
+        const message = order.message ?? "Checkout failed";
+        setError(message);
+        toast.error(message);
+        return;
+      }
+      clearCart();
+      router.push(`/order/${order.orderId}`);
+    } catch {
+      const message = "Unable to reach checkout. Please check your connection and try again.";
+      setError(message);
+      toast.error(message);
     }
-    clearCart();
-    router.push(`/order/${order.orderId}`);
   }
 
   return (
@@ -39,6 +51,7 @@ export default function CheckoutPage() {
           <h1 className="font-display text-5xl">Checkout</h1>
           <p className="mt-3 text-[#737373]">Razorpay is mocked safely until keys are added to `.env.local`.</p>
         </div>
+        {error && <ErrorAlert message={error} />}
         <div className="grid gap-4 sm:grid-cols-2">
           {[
             ["email", "Email"],

@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Heart, Menu, Search, ShoppingBag, User, X } from "lucide-react";
+import { Heart, Menu, ShoppingBag, User, X } from "lucide-react";
+import { HeaderSearch } from "@/components/layout/header-search";
 import { useCartStore } from "@/store/cart-store";
 
 const links = [
@@ -10,8 +11,9 @@ const links = [
   ["Earrings", "/earrings"],
   ["Necklaces", "/necklaces"],
   ["Bracelets", "/bracelets"],
-  ["Bridal", "/collections/bridal"],
+  ["Collections", "/collections"],
   ["Gifts", "/gifts"],
+  ["Guides", "/gift-guides"],
 ];
 
 export function Navbar() {
@@ -38,14 +40,19 @@ export function Navbar() {
           ))}
         </div>
         <div className="flex items-center gap-4">
-          <Search size={20} />
-          <Heart className="hidden sm:block" size={20} />
+          <HeaderSearch />
+          <Link href="/account/wishlist" aria-label="Wishlist" className="hidden sm:block">
+            <Heart size={20} />
+          </Link>
           <Link href="/account" aria-label="Account" className="hidden sm:block">
             <User size={20} />
           </Link>
           <Link href="/cart" aria-label="Cart" className="relative">
             <ShoppingBag size={20} />
             {count > 0 && <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#B58E62] px-1 text-[10px] text-white">{count}</span>}
+          </Link>
+          <Link href="/hi" hrefLang="hi" className="text-xs font-semibold uppercase tracking-[0.16em]" aria-label="Switch to Hindi">
+            HI
           </Link>
         </div>
       </nav>

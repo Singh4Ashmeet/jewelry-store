@@ -2,10 +2,12 @@ import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { ChevronLeft, ChevronRight, Gem, Gift, ShieldCheck, Truck } from "lucide-react";
+import { Gem, Gift, ShieldCheck, Truck } from "lucide-react";
 import { ProductVisual, ProductCard } from "@/components/common/product-card";
 import { AddToCartPanel } from "@/components/product/add-to-cart-panel";
+import { ProductGallery } from "@/components/product/product-gallery";
 import { editorialImages, getProduct, products } from "@/lib/data";
+import { getRelatedProducts } from "@/lib/product-query";
 import { formatPrice } from "@/lib/utils";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -27,7 +29,7 @@ export default async function ProductPage({ params }: Props) {
   const { slug } = await params;
   const product = getProduct(slug);
   if (!product) notFound();
-  const related = products.filter((item) => item.id !== product.id).slice(0, 5);
+  const related = getRelatedProducts(product, 4);
   const image = product.images[0]?.url;
   const gallery = [image, editorialImages.hands, editorialImages.hero, editorialImages.craft].filter(Boolean) as string[];
 
@@ -52,28 +54,7 @@ export default async function ProductPage({ params }: Props) {
         </div>
 
         <div className="grid gap-12 lg:grid-cols-[1.05fr_0.95fr]">
-          <div>
-            <div className="relative">
-              <ProductVisual name={product.name} src={image} className="min-h-[520px] aspect-[1.18/1] rounded-[8px]" />
-              {product.isBestseller && <span className="absolute left-5 top-5 rounded-sm bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#A07840]">Bestseller</span>}
-              <button className="absolute left-5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 shadow" aria-label="Previous image">
-                <ChevronLeft />
-              </button>
-              <button className="absolute right-5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 shadow" aria-label="Next image">
-                <ChevronRight />
-              </button>
-            </div>
-            <div className="mt-3 grid grid-cols-5 gap-3">
-              {gallery.map((item, index) => (
-                <ProductVisual key={item} name={`${product.name} view ${index + 1}`} src={item} className={`aspect-square rounded-[6px] ${index === 0 ? "ring-1 ring-[#B58E62]" : ""}`} />
-              ))}
-              <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-[6px] bg-[#B58E62]/25 text-xs font-semibold uppercase tracking-[0.16em] text-white">
-                <Image src={editorialImages.craft} alt="Watch video" fill sizes="20vw" className="object-cover" />
-                <div className="absolute inset-0 bg-black/25" />
-                <span className="relative">Watch video</span>
-              </div>
-            </div>
-          </div>
+          <ProductGallery product={product} gallery={gallery} />
 
           <AddToCartPanel product={product} />
         </div>

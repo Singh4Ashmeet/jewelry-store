@@ -2,6 +2,6 @@ import { CategoryPage, categoryMetadata } from "@/components/product/category-pa
 
 export const metadata = categoryMetadata("Gifts");
 
-export default function Page() {
-  return <CategoryPage category="GIFT" title="Gifts" copy="Gift-ready jewellery with premium packaging for milestones, rituals, and small celebrations." />;
+export default async function Page({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  return <CategoryPage category="GIFT" title="Gifts" copy="Gift-ready jewellery with premium packaging for milestones, rituals, and small celebrations." searchParams={await searchParams} />;
 }

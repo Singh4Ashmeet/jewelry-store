@@ -81,6 +81,7 @@ export function AddToCartPanel({ product }: { product: Product }) {
               onClick={() => {
                 setVariantId(variant.id);
                 setQuantity((value) => Math.min(value, Math.max(1, variant.stock)));
+                window.dispatchEvent(new CustomEvent("aurelia:variant-change", { detail: { metal: variant.metal, variantId: variant.id } }));
               }}
               aria-label={`Select ${METAL_LABELS[variant.metal]} variant with ${variant.stock} in stock`}
               className={`border px-4 py-3 text-sm transition ${variant.id === variantId ? "border-[#1C1C1A] bg-white" : "border-[#EAE5DF] bg-[#FAF7F2]"}`}

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Cormorant_Garamond, Jost } from "next/font/google";
 import { Toaster } from "sonner";
+import { AnalyticsScripts } from "@/components/common/analytics-scripts";
 import { Footer } from "@/components/layout/footer";
 import { Navbar } from "@/components/layout/navbar";
 import { env } from "@/lib/env";
@@ -49,6 +50,7 @@ export default function RootLayout({
         <main className="flex-1">{children}</main>
         <Footer />
         <Toaster position="top-center" richColors />
+        <AnalyticsScripts />
       </body>
     </html>
   );

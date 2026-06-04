@@ -1,10 +1,11 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
-import { ChevronDown } from "lucide-react";
 import { ProductCard } from "@/components/common/product-card";
 import { ButtonLink } from "@/components/common/button";
-import { categoryPages, editorialImages, getProductsByCategory } from "@/lib/data";
+import { ProductFilters } from "@/components/product/product-filters";
+import { categoryPages, editorialImages } from "@/lib/data";
+import { parseProductFilters, queryProducts } from "@/lib/product-query";
 import type { ProductCategory } from "@/types";
 
 export function categoryMetadata(title: string): Metadata {
@@ -14,11 +15,19 @@ export function categoryMetadata(title: string): Metadata {
   };
 }
 
-const filters = ["Metal", "Stone", "Price", "Occasion", "Style", "Availability"];
-
-export function CategoryPage({ category, title, copy }: { category?: ProductCategory; title: string; copy: string }) {
-  const sourceItems = category ? getProductsByCategory(category) : getProductsByCategory().filter((item) => item.isNew);
-  const items = [...sourceItems, ...getProductsByCategory().filter((item) => !sourceItems.some((source) => source.id === item.id))].slice(0, 8);
+export async function CategoryPage({
+  category,
+  title,
+  copy,
+  searchParams,
+}: {
+  category?: ProductCategory;
+  title: string;
+  copy: string;
+  searchParams?: Record<string, string | string[] | undefined>;
+}) {
+  const filters = { ...parseProductFilters(searchParams), category };
+  const items = await queryProducts(filters);
   const selected = categoryPages.find((page) => page.category === category);
   const heroImage = selected?.image ?? editorialImages.hero;
 
@@ -44,24 +53,10 @@ export function CategoryPage({ category, title, copy }: { category?: ProductCate
 
       <section className="mx-auto max-w-7xl px-4 py-7 sm:px-6 lg:px-8">
         <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
-          <p className="text-sm text-[#2D2D2D]">{category === "RING" ? 168 : items.length * 21} Results</p>
-          <div className="flex flex-wrap gap-3">
-            {filters.map((filter) => (
-              <button
-                key={filter}
-                className="inline-flex h-11 items-center gap-8 rounded-[4px] border border-[#EAE5DF] bg-white px-4 text-sm text-[#2D2D2D]"
-                type="button"
-                aria-label={`Filter by ${filter}`}
-              >
-                {filter}
-                <ChevronDown size={15} />
-              </button>
-            ))}
-          </div>
-          <button className="inline-flex items-center gap-2 text-sm" type="button" aria-label="Sort products">
-            Sort by: Best Selling
-            <ChevronDown size={15} />
-          </button>
+          <p className="text-sm text-[#2D2D2D]">{items.length} Results</p>
+        </div>
+        <div className="mt-5">
+          <ProductFilters initialFilters={filters} />
         </div>
 
         <div className="relative mt-7 overflow-hidden rounded-[8px] bg-[#F5F1EB]">

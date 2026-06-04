@@ -2,6 +2,6 @@ import { CategoryPage, categoryMetadata } from "@/components/product/category-pa
 
 export const metadata = categoryMetadata("Rings");
 
-export default function Page() {
-  return <CategoryPage category="RING" title="Rings" copy="Sculptural bands, fine solitaires, and stackable gold pieces for everyday radiance." />;
+export default async function Page({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  return <CategoryPage category="RING" title="Rings" copy="Sculptural bands, fine solitaires, and stackable gold pieces for everyday radiance." searchParams={await searchParams} />;
 }
