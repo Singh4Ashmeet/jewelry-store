@@ -1,5 +1,5 @@
 import Link from "next/link";
-/* eslint-disable @next/next/no-img-element */
+import Image from "next/image";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ChevronLeft, ChevronRight, Gem, Gift, ShieldCheck, Truck } from "lucide-react";
@@ -68,7 +68,7 @@ export default async function ProductPage({ params }: Props) {
                 <ProductVisual key={item} name={`${product.name} view ${index + 1}`} src={item} className={`aspect-square rounded-[6px] ${index === 0 ? "ring-1 ring-[#B58E62]" : ""}`} />
               ))}
               <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-[6px] bg-[#B58E62]/25 text-xs font-semibold uppercase tracking-[0.16em] text-white">
-                <img src={editorialImages.craft} alt="Watch video" className="absolute inset-0 h-full w-full object-cover" />
+                <Image src={editorialImages.craft} alt="Watch video" fill sizes="20vw" className="object-cover" />
                 <div className="absolute inset-0 bg-black/25" />
                 <span className="relative">Watch video</span>
               </div>
@@ -118,10 +118,16 @@ export default async function ProductPage({ params }: Props) {
               <p className="mt-5 font-display text-5xl">4.9</p>
               <p className="mt-2 text-[#B58E62]">★★★★★</p>
               <p className="mt-2 text-xs text-[#737373]">Based on verified purchases</p>
-              <button className="mt-6 border border-[#B58E62] px-5 py-3 text-xs uppercase tracking-[0.18em] text-[#A07840]">Write a Review</button>
+              <button className="mt-6 border border-[#B58E62] px-5 py-3 text-xs uppercase tracking-[0.18em] text-[#A07840]" type="button">
+                Write a Review
+              </button>
             </div>
             <div className="grid grid-cols-3 gap-2 p-3">
-              {gallery.slice(0, 3).map((item) => <img key={item} src={item} alt="Customer jewellery review" className="h-full min-h-44 rounded-[4px] object-cover" />)}
+              {gallery.slice(0, 3).map((item) => (
+                <div key={item} className="relative min-h-44 overflow-hidden rounded-[4px]">
+                  <Image src={item} alt="Customer jewellery review" fill sizes="15vw" className="object-cover" />
+                </div>
+              ))}
             </div>
           </div>
         </section>
@@ -144,7 +150,9 @@ export default async function ProductPage({ params }: Props) {
             </div>
           </div>
           <p className="font-medium">{formatPrice(product.basePrice)}</p>
-          <button className="h-12 min-w-52 rounded-sm bg-[#B58E62] px-8 text-xs font-semibold uppercase tracking-[0.18em] text-white">Add to Bag</button>
+          <button className="h-12 min-w-52 rounded-sm bg-[#B58E62] px-8 text-xs font-semibold uppercase tracking-[0.18em] text-white" type="button">
+            Add to Bag
+          </button>
         </div>
       </div>
     </>

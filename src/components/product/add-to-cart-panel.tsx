@@ -5,6 +5,7 @@ import { Heart, Minus, Plus, Sparkles, Truck } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/common/button";
 import { useCartStore } from "@/store/cart-store";
+import { useWishlistStore } from "@/store/wishlist-store";
 import { formatPrice } from "@/lib/utils";
 import type { Product } from "@/types";
 import { METAL_LABELS } from "@/types";
@@ -13,10 +14,18 @@ export function AddToCartPanel({ product }: { product: Product }) {
   const [variantId, setVariantId] = useState(product.variants[0]?.id ?? "");
   const [quantity, setQuantity] = useState(1);
   const addItem = useCartStore((state) => state.addItem);
+  const toggleWishlist = useWishlistStore((state) => state.toggleItem);
+  const isWishlisted = useWishlistStore((state) => state.hasItem(product.id));
   const selected = useMemo(() => product.variants.find((variant) => variant.id === variantId) ?? product.variants[0], [product, variantId]);
+  const maxQuantity = Math.max(1, selected?.stock ?? 1);
 
   function addToBag() {
     if (!selected) return;
+    if (selected.stock < 1) {
+      toast.error("This variant is currently out of stock");
+      return;
+    }
+
     addItem({
       productId: product.id,
       variantId: selected.id,
@@ -27,6 +36,7 @@ export function AddToCartPanel({ product }: { product: Product }) {
       size: selected.size,
       price: selected.price,
       quantity,
+      stock: selected.stock,
       sku: selected.sku,
     });
     toast.success("Added to bag");
@@ -43,8 +53,22 @@ export function AddToCartPanel({ product }: { product: Product }) {
           <h1 className="mt-4 font-display text-5xl">{product.name}</h1>
           <p className="mt-4 text-2xl font-medium">{formatPrice(selected?.price ?? product.basePrice)}</p>
         </div>
-        <button aria-label="Wishlist" className="rounded-full border border-[#EAE5DF] p-3">
-          <Heart />
+        <button
+          aria-label={isWishlisted ? `Remove ${product.name} from wishlist` : `Add ${product.name} to wishlist`}
+          aria-pressed={isWishlisted}
+          className="rounded-full border border-[#EAE5DF] p-3"
+          onClick={() =>
+            toggleWishlist({
+              productId: product.id,
+              name: product.name,
+              slug: product.slug,
+              image: product.images[0]?.url ?? "",
+              price: product.basePrice,
+            })
+          }
+          type="button"
+        >
+          <Heart fill={isWishlisted ? "currentColor" : "none"} />
         </button>
       </div>
       <p className="text-lg leading-8 text-[#6B6B68]">{product.description}</p>
@@ -54,8 +78,13 @@ export function AddToCartPanel({ product }: { product: Product }) {
           {product.variants.map((variant) => (
             <button
               key={variant.id}
-              onClick={() => setVariantId(variant.id)}
+              onClick={() => {
+                setVariantId(variant.id);
+                setQuantity((value) => Math.min(value, Math.max(1, variant.stock)));
+              }}
+              aria-label={`Select ${METAL_LABELS[variant.metal]} variant with ${variant.stock} in stock`}
               className={`border px-4 py-3 text-sm transition ${variant.id === variantId ? "border-[#1C1C1A] bg-white" : "border-[#EAE5DF] bg-[#FAF7F2]"}`}
+              type="button"
             >
               {METAL_LABELS[variant.metal]}
             </button>
@@ -72,11 +101,13 @@ export function AddToCartPanel({ product }: { product: Product }) {
       )}
       <div className="flex items-center gap-4">
         <div className="flex h-11 items-center border border-[#EAE5DF] bg-white">
-          <button className="px-3" onClick={() => setQuantity((value) => Math.max(1, value - 1))} aria-label="Decrease quantity"><Minus size={16} /></button>
+          <button className="px-3" onClick={() => setQuantity((value) => Math.max(1, value - 1))} aria-label="Decrease quantity" type="button"><Minus size={16} /></button>
           <span className="w-10 text-center">{quantity}</span>
-          <button className="px-3" onClick={() => setQuantity((value) => value + 1)} aria-label="Increase quantity"><Plus size={16} /></button>
+          <button className="px-3" onClick={() => setQuantity((value) => Math.min(maxQuantity, value + 1))} aria-label="Increase quantity" type="button"><Plus size={16} /></button>
         </div>
-        <Button className="flex-1" onClick={addToBag}>Add to Bag</Button>
+        <Button className="flex-1" onClick={addToBag} disabled={!selected || selected.stock < 1}>
+          {selected?.stock ? "Add to Bag" : "Out of Stock"}
+        </Button>
       </div>
       <Button variant="secondary" className="w-full">Book Video Consultation</Button>
       <div className="grid gap-3 text-sm text-[#6B6B68] sm:grid-cols-2">

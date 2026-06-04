@@ -1,5 +1,11 @@
-import { StaticPage } from "@/components/common/static-page";
+import type { Metadata } from "next";
+import { WishlistClient } from "./wishlist-client";
 
-export default function Page() {
-  return <StaticPage title="Wishlist" copy="Wishlist-ready UI prepared for authenticated saved products." />;
+export const metadata: Metadata = {
+  title: "Wishlist",
+  description: "Your saved Aurelia Jewellery pieces.",
+};
+
+export default function WishlistPage() {
+  return <WishlistClient />;
 }

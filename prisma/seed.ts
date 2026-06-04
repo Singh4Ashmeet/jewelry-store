@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 // @ts-nocheck
-import { PrismaClient, ProductCategory, MetalType, UserRole, OrderStatus, PaymentStatus, PaymentMethod } from "@prisma/client";
+import { PrismaClient, UserRole, OrderStatus, PaymentStatus, PaymentMethod } from "@prisma/client";
+import type { ProductCategory, MetalType } from "@prisma/client";
 import { products } from "../src/lib/data";
 import { env } from "../src/lib/env";
 

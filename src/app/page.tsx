@@ -1,5 +1,5 @@
 import Link from "next/link";
-/* eslint-disable @next/next/no-img-element */
+import Image from "next/image";
 import { Gem, Gift, LockKeyhole, Truck, Play } from "lucide-react";
 import { ProductCard } from "@/components/common/product-card";
 import { ButtonLink } from "@/components/common/button";
@@ -19,7 +19,7 @@ export default function Home() {
     <>
       <section className="relative overflow-hidden border-b border-[#EAE5DF]">
         <div className="absolute inset-0">
-          <img src={editorialImages.hero} alt="Model wearing Aurelia jewellery" className="h-full w-full object-cover object-center" />
+          <Image src={editorialImages.hero} alt="Model wearing Aurelia jewellery" fill priority sizes="100vw" className="object-cover object-center" />
           <div className="absolute inset-0 bg-gradient-to-r from-[#FCFAF8] via-[#FCFAF8]/82 to-[#FCFAF8]/10" />
         </div>
         <div className="relative mx-auto flex min-h-[430px] max-w-7xl items-center px-4 py-16 sm:px-6 lg:px-8">
@@ -43,7 +43,7 @@ export default function Home() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           {categoryPages.slice(0, 5).map((category) => (
             <Link key={category.href} href={category.href} className="group relative h-32 overflow-hidden rounded-[8px] bg-[#F5F1EB]">
-              <img src={category.image} alt={category.title} className="h-full w-full object-cover transition duration-700 group-hover:scale-105" />
+              <Image src={category.image} alt={category.title} fill sizes="(min-width: 1024px) 20vw, 50vw" className="object-cover transition duration-700 group-hover:scale-105" />
               <div className="absolute inset-0 bg-gradient-to-t from-[#FCFAF8]/90 via-transparent to-transparent" />
               <p className="absolute bottom-4 left-0 right-0 text-center text-xs font-medium uppercase tracking-[0.18em]">{category.title}</p>
             </Link>
@@ -85,7 +85,7 @@ export default function Home() {
           <ButtonLink href="/about" variant="secondary" className="mt-6 w-fit">Discover Our Craftsmanship</ButtonLink>
         </div>
         <div className="relative min-h-72 overflow-hidden rounded-[8px]">
-          <img src={editorialImages.craft} alt="Jewellery craftsmanship" className="h-full min-h-72 w-full object-cover" />
+          <Image src={editorialImages.craft} alt="Jewellery craftsmanship" fill sizes="60vw" className="object-cover" />
           <div className="absolute inset-0 bg-gradient-to-r from-black/35 to-transparent" />
           <div className="absolute right-8 top-1/2 flex -translate-y-1/2 items-center gap-4 text-white">
             <span className="flex h-14 w-14 items-center justify-center rounded-full border border-white"><Play fill="currentColor" /></span>
@@ -115,7 +115,11 @@ export default function Home() {
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
           {[...categoryPages, ...products.slice(0, 2)].map((item, index) => {
             const image = "image" in item ? item.image : item.images[0]?.url;
-            return <img key={index} src={image} alt="Aurelia social gallery" className="aspect-square w-full rounded-[4px] object-cover" />;
+            return (
+              <div key={index} className="relative aspect-square w-full overflow-hidden rounded-[4px]">
+                <Image src={image} alt="Aurelia social gallery" fill sizes="12.5vw" className="object-cover" />
+              </div>
+            );
           })}
         </div>
       </section>

@@ -69,7 +69,16 @@ export interface CartItem {
   size: string | null;
   price: number;
   quantity: number;
+  stock: number;
   sku: string;
+}
+
+export interface WishlistItem {
+  productId: string;
+  name: string;
+  slug: string;
+  image: string;
+  price: number;
 }
 
 // ─── Order Types ──────────────────────────────────────
