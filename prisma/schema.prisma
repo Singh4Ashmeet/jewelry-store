@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ─── Enums ────────────────────────────────────────────
@@ -144,24 +145,24 @@ model Address {
 // ─── Product ──────────────────────────────────────────
 
 model Product {
-  id          String          @id @default(cuid())
-  name        String
-  slug        String          @unique
-  description String          @db.Text
-  shortDesc   String?
-  category    ProductCategory
-  basePrice   Float
-  compareAt   Float?
-  isFeatured  Boolean         @default(false)
-  isNew       Boolean         @default(false)
-  isBestseller Boolean        @default(false)
-  isActive    Boolean         @default(true)
-  tags        String[]
-  tryOn       Json?
+  id           String          @id @default(cuid())
+  name         String
+  slug         String          @unique
+  description  String          @db.Text
+  shortDesc    String?
+  category     ProductCategory
+  basePrice    Float
+  compareAt    Float?
+  isFeatured   Boolean         @default(false)
+  isNew        Boolean         @default(false)
+  isBestseller Boolean         @default(false)
+  isActive     Boolean         @default(true)
+  tags         String[]
+  tryOn        Json?
 
-  variants ProductVariant[]
-  images   ProductImage[]
-  reviews  Review[]
+  variants      ProductVariant[]
+  images        ProductImage[]
+  reviews       Review[]
   wishlistItems WishlistItem[]
   orderItems    OrderItem[]
 
@@ -202,30 +203,30 @@ model ProductImage {
 // ─── Order ────────────────────────────────────────────
 
 model Order {
-  id              String        @id @default(cuid())
-  orderNumber     String        @unique
-  userId          String?
-  addressId       String?
-  email           String
-  phone           String
-  status          OrderStatus   @default(PENDING)
-  paymentStatus   PaymentStatus @default(PENDING)
-  paymentMethod   PaymentMethod?
-  razorpayOrderId String?
+  id                String         @id @default(cuid())
+  orderNumber       String         @unique
+  userId            String?
+  addressId         String?
+  email             String
+  phone             String
+  status            OrderStatus    @default(PENDING)
+  paymentStatus     PaymentStatus  @default(PENDING)
+  paymentMethod     PaymentMethod?
+  razorpayOrderId   String?
   razorpayPaymentId String?
-  subtotal        Float
-  shippingCost    Float         @default(0)
-  discount        Float         @default(0)
-  tax             Float         @default(0)
-  total           Float
-  couponCode      String?
-  giftMessage     String?
-  trackingNumber  String?
-  awbNumber       String?
-  notes           String?
+  subtotal          Float
+  shippingCost      Float          @default(0)
+  discount          Float          @default(0)
+  tax               Float          @default(0)
+  total             Float
+  couponCode        String?
+  giftMessage       String?
+  trackingNumber    String?
+  awbNumber         String?
+  notes             String?
 
-  user    User?    @relation(fields: [userId], references: [id])
-  address Address? @relation(fields: [addressId], references: [id])
+  user    User?       @relation(fields: [userId], references: [id])
+  address Address?    @relation(fields: [addressId], references: [id])
   items   OrderItem[]
 
   createdAt DateTime @default(now())
@@ -233,20 +234,20 @@ model Order {
 }
 
 model OrderItem {
-  id          String  @id @default(cuid())
-  orderId     String
-  productId   String
-  variantId   String?
-  name        String
-  sku         String
-  metal       String?
-  size        String?
-  price       Float
-  quantity    Int
-  imageUrl    String?
+  id        String  @id @default(cuid())
+  orderId   String
+  productId String
+  variantId String?
+  name      String
+  sku       String
+  metal     String?
+  size      String?
+  price     Float
+  quantity  Int
+  imageUrl  String?
 
-  order   Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product Product        @relation(fields: [productId], references: [id])
+  order   Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product         @relation(fields: [productId], references: [id])
   variant ProductVariant? @relation(fields: [variantId], references: [id])
 
   createdAt DateTime @default(now())
@@ -255,12 +256,12 @@ model OrderItem {
 // ─── Review ───────────────────────────────────────────
 
 model Review {
-  id        String  @id @default(cuid())
-  productId String
-  userId    String
-  rating    Int
-  title     String?
-  body      String? @db.Text
+  id         String  @id @default(cuid())
+  productId  String
+  userId     String
+  rating     Int
+  title      String?
+  body       String? @db.Text
   isApproved Boolean @default(false)
 
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
