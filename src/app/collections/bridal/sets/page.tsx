@@ -12,7 +12,14 @@ export default async function Page({
       category="BRIDAL"
       title="Bridal Sets"
       copy="Ceremonial chokers, earrings, maang tikkas, and polished sets for modern wedding rituals."
+      pathname="/collections/bridal/sets"
       searchParams={await searchParams}
+      subCategory={{
+        label: 'Bridal Sets',
+        tag: 'sets',
+        parentHref: '/collections/bridal',
+        parentLabel: 'Bridal Jewellery',
+      }}
     />
   );
 }

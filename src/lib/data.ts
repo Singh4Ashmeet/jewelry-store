@@ -258,7 +258,54 @@ const productNames = [
   ],
 ] as const;
 
-export const products: Product[] = productNames.map(
+const catalogueItems = productNames.flatMap((item) => {
+  const [name, category, price, featured, isNew, image] = item;
+  return Array.from({ length: 4 }, (_, edition) => [
+    edition === 0 ? name : `${name} ${['Reserve', 'Atelier', 'Heritage'][edition - 1]}`,
+    category,
+    price + edition * 220,
+    featured && edition < 2,
+    isNew || edition === 3,
+    image,
+  ] as const);
+});
+
+function subcategoryTags(category: ProductCategory, name: string, price: number) {
+  const lower = name.toLowerCase();
+  const tags = new Set<string>(['gold']);
+
+  if (lower.includes('diamond') || lower.includes('solitaire') || lower.includes('radiance') || lower.includes('oval')) tags.add('diamond');
+  if (lower.includes('pearl')) tags.add('pearl');
+  if (lower.includes('ruby')) tags.add('ruby');
+  if (lower.includes('emerald')) tags.add('emerald');
+
+  if (category === 'RING') {
+    if (lower.includes('solitaire')) tags.add('solitaire');
+    if (lower.includes('stacking') || lower.includes('band')) tags.add('stacking');
+  }
+  if (category === 'NECKLACE') {
+    if (lower.includes('pendant')) tags.add('pendants');
+    if (lower.includes('chain') || lower.includes('layered')) tags.add('chains');
+  }
+  if (category === 'EARRING') {
+    if (lower.includes('hoop') || lower.includes('huggies')) tags.add('hoops');
+    if (lower.includes('stud')) tags.add('studs');
+  }
+  if (category === 'BRACELET') {
+    if (lower.includes('tennis') || lower.includes('line')) tags.add('tennis');
+    if (lower.includes('cuff')) tags.add('cuffs');
+    if (lower.includes('chain')) tags.add('chain');
+  }
+  if (category === 'GIFT') {
+    tags.add('anniversary');
+    if (price <= 1000) tags.add('under-1000');
+  }
+  if (category === 'BRIDAL') tags.add('sets');
+
+  return Array.from(tags);
+}
+
+export const products: Product[] = catalogueItems.map(
   ([name, category, price, featured, isNew, image], index) => {
     const slug = name
       .toLowerCase()
@@ -278,7 +325,7 @@ export const products: Product[] = productNames.map(
       isNew,
       isBestseller: index % 4 === 0,
       isActive: true,
-      tags: ['18k finish', 'gift ready', category.toLowerCase()],
+      tags: ['18k finish', 'gift ready', category.toLowerCase(), ...subcategoryTags(category, name, price)],
       createdAt: now,
       images: [
         {

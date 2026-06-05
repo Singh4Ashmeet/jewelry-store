@@ -1,13 +1,17 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { SlidersHorizontal, X } from 'lucide-react';
 import type { ProductFilterInput, ProductSort } from '@/lib/product-query';
-import { gemstoneOptions } from '@/lib/product-query';
+import {
+  buildFilterSearchParams,
+  clearFilterSearchParams,
+  gemstoneOptions,
+  metalOptions,
+} from '@/lib/filterUtils';
 import { METAL_LABELS, type MetalType } from '@/types';
 
-const metals: MetalType[] = ['YELLOW_GOLD', 'ROSE_GOLD', 'WHITE_GOLD', 'PLATINUM', 'SILVER'];
 const sortOptions: { value: ProductSort; label: string }[] = [
   { value: 'popular', label: 'Popularity' },
   { value: 'price-asc', label: 'Price low to high' },
@@ -22,48 +26,55 @@ function updateList(values: string[] | undefined, value: string, checked: boolea
   return Array.from(current);
 }
 
-export function ProductFilters({ initialFilters }: { initialFilters: ProductFilterInput }) {
+export function ProductFilters({
+  initialFilters,
+  onChange,
+}: {
+  initialFilters: ProductFilterInput;
+  onChange?: (filters: ProductFilterInput) => void;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [draft, setDraft] = useState<ProductFilterInput>(initialFilters);
+
+  useEffect(() => {
+    onChange?.(draft);
+  }, [draft, onChange]);
+
   const activeFilterCount = useMemo(() => {
     return [
       draft.minPrice !== undefined,
       draft.maxPrice !== undefined,
       Boolean(draft.metals?.length),
       Boolean(draft.gemstones?.length),
+      draft.minRating !== undefined,
       draft.inStock,
       draft.onSale,
     ].filter(Boolean).length;
   }, [draft]);
 
   function commit(nextFilters = draft) {
-    const params = new URLSearchParams(searchParams.toString());
-    const setOrDelete = (key: string, value?: string | number | boolean) => {
-      if (value === undefined || value === '' || value === false) params.delete(key);
-      else params.set(key, String(value));
-    };
+    const params = buildFilterSearchParams(searchParams.toString(), nextFilters);
+    const query = params.toString();
+    router.push(query ? `${pathname}?${query}` : pathname, { scroll: false });
+  }
 
-    setOrDelete('min', nextFilters.minPrice);
-    setOrDelete('max', nextFilters.maxPrice);
-    setOrDelete('sort', nextFilters.sort === 'popular' ? undefined : nextFilters.sort);
-    setOrDelete('stock', nextFilters.inStock ? 'in' : undefined);
-    setOrDelete('sale', nextFilters.onSale ? 'true' : undefined);
-
-    const metalValues = nextFilters.metals ?? [];
-    const gemstoneValues = nextFilters.gemstones ?? [];
-    setOrDelete('metal', metalValues.join(','));
-    setOrDelete('gem', gemstoneValues.join(','));
-
-    router.push(`${pathname}?${params.toString()}`, { scroll: false });
+  function setDraftAndCommit(nextFilters: ProductFilterInput) {
+    setDraft(nextFilters);
+    commit(nextFilters);
   }
 
   function clearFilters() {
-    const params = new URLSearchParams(searchParams.toString());
-    ['min', 'max', 'metal', 'gem', 'stock', 'sale', 'sort'].forEach((key) => params.delete(key));
-    setDraft({ q: initialFilters.q, category: initialFilters.category, sort: 'popular' });
-    router.push(`${pathname}?${params.toString()}`, { scroll: false });
+    const params = clearFilterSearchParams(searchParams.toString());
+    setDraft({
+      q: initialFilters.q,
+      category: initialFilters.category,
+      subCategory: initialFilters.subCategory,
+      sort: 'popular',
+    });
+    const query = params.toString();
+    router.push(query ? `${pathname}?${query}` : pathname, { scroll: false });
   }
 
   function setNumber(key: 'minPrice' | 'maxPrice', value: string) {
@@ -157,22 +168,23 @@ export function ProductFilters({ initialFilters }: { initialFilters: ProductFilt
               Metal
             </legend>
             <div className="grid gap-1 p-5 pt-3">
-              {metals.map((metal) => (
+              {metalOptions.map((metal) => (
                 <label key={metal} className="flex min-h-9 items-center gap-3 text-sm">
                   <input
                     type="checkbox"
                     className="h-4 w-4 accent-[#B58E62]"
                     checked={draft.metals?.includes(metal) ?? false}
-                    onChange={(event) =>
-                      setDraft((current) => ({
-                        ...current,
+                    onChange={(event) => {
+                      const next = {
+                        ...draft,
                         metals: updateList(
-                          current.metals,
+                          draft.metals,
                           metal,
                           event.target.checked,
                         ) as MetalType[],
-                      }))
-                    }
+                      };
+                      setDraftAndCommit(next);
+                    }}
                   />
                   {METAL_LABELS[metal]}
                 </label>
@@ -194,12 +206,13 @@ export function ProductFilters({ initialFilters }: { initialFilters: ProductFilt
                     type="checkbox"
                     className="h-4 w-4 accent-[#B58E62]"
                     checked={draft.gemstones?.includes(gemstone) ?? false}
-                    onChange={(event) =>
-                      setDraft((current) => ({
-                        ...current,
-                        gemstones: updateList(current.gemstones, gemstone, event.target.checked),
-                      }))
-                    }
+                    onChange={(event) => {
+                      const next = {
+                        ...draft,
+                        gemstones: updateList(draft.gemstones, gemstone, event.target.checked),
+                      };
+                      setDraftAndCommit(next);
+                    }}
                   />
                   {gemstone}
                 </label>
@@ -214,9 +227,7 @@ export function ProductFilters({ initialFilters }: { initialFilters: ProductFilt
             <select
               className="h-11 border border-[#EAE5DF] bg-[#FCFAF8] px-3 outline-none focus:border-[#B58E62]"
               value={draft.sort ?? 'popular'}
-              onChange={(event) =>
-                setDraft((current) => ({ ...current, sort: event.target.value as ProductSort }))
-              }
+              onChange={(event) => setDraftAndCommit({ ...draft, sort: event.target.value as ProductSort })}
             >
               {sortOptions.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -230,9 +241,7 @@ export function ProductFilters({ initialFilters }: { initialFilters: ProductFilt
               className="h-4 w-4 accent-[#B58E62]"
               type="checkbox"
               checked={draft.inStock ?? false}
-              onChange={(event) =>
-                setDraft((current) => ({ ...current, inStock: event.target.checked }))
-              }
+              onChange={(event) => setDraftAndCommit({ ...draft, inStock: event.target.checked })}
             />
             In stock
           </label>
@@ -241,11 +250,26 @@ export function ProductFilters({ initialFilters }: { initialFilters: ProductFilt
               className="h-4 w-4 accent-[#B58E62]"
               type="checkbox"
               checked={draft.onSale ?? false}
-              onChange={(event) =>
-                setDraft((current) => ({ ...current, onSale: event.target.checked }))
-              }
+              onChange={(event) => setDraftAndCommit({ ...draft, onSale: event.target.checked })}
             />
             On sale
+          </label>
+          <label className="grid gap-2 text-sm">
+            <span className="text-xs font-semibold tracking-[0.2em] uppercase">Rating</span>
+            <select
+              className="h-11 border border-[#EAE5DF] bg-[#FCFAF8] px-3 outline-none focus:border-[#B58E62]"
+              value={draft.minRating ?? ''}
+              onChange={(event) =>
+                setDraftAndCommit({
+                  ...draft,
+                  minRating: event.target.value ? Number(event.target.value) : undefined,
+                })
+              }
+            >
+              <option value="">Any rating</option>
+              <option value="4">4 stars & up</option>
+              <option value="5">5 stars</option>
+            </select>
           </label>
         </div>
       </div>

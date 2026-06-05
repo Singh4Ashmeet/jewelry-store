@@ -10,9 +10,17 @@ export default async function Page({
   return (
     <CategoryPage
       category="BRACELET"
+      categorySlug="bracelets"
       title="Tennis Bracelets"
       copy="Structured bracelets, line settings, and gold cuffs with a polished luxury finish."
+      pathname="/bracelets/tennis"
       searchParams={await searchParams}
+      subCategory={{
+        label: 'Tennis Bracelets',
+        tag: 'tennis',
+        parentHref: '/bracelets',
+        parentLabel: 'Bracelets',
+      }}
     />
   );
 }

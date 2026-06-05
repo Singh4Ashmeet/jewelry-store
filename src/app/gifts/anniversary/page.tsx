@@ -10,9 +10,17 @@ export default async function Page({
   return (
     <CategoryPage
       category="GIFT"
+      categorySlug="gifts"
       title="Anniversary Gifts"
       copy="Gift-ready pendants, studs, charms, and rings selected for meaningful milestone moments."
+      pathname="/gifts/anniversary"
       searchParams={await searchParams}
+      subCategory={{
+        label: 'Anniversary Gifts',
+        tag: 'anniversary',
+        parentHref: '/gifts',
+        parentLabel: 'Gifts',
+      }}
     />
   );
 }

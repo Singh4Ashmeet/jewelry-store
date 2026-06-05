@@ -4,8 +4,11 @@ import type { Metadata } from 'next';
 import { ButtonLink } from '@/components/common/button';
 import { ProductCard } from '@/components/common/product-card';
 import { ProductFilters } from '@/components/product/product-filters';
+import { ProductPagination } from '@/components/product/product-pagination';
+import { shopCategories } from '@/lib/category-config';
 import { categoryPages, editorialImages } from '@/lib/data';
-import { parseProductFilters, queryProducts } from '@/lib/product-query';
+import { parseListingParams } from '@/lib/filterUtils';
+import { queryProductListing } from '@/lib/product-query';
 import type { ProductCategory } from '@/types';
 
 const categoryEdits: Record<
@@ -135,20 +138,37 @@ export function categoryMetadata(title: string): Metadata {
 
 export async function CategoryPage({
   category,
+  categorySlug,
   title,
   copy,
   searchParams,
+  pathname,
+  subCategory,
 }: {
   category?: ProductCategory;
+  categorySlug?: string;
   title: string;
   copy: string;
   searchParams?: Record<string, string | string[] | undefined>;
+  pathname?: string;
+  subCategory?: {
+    label: string;
+    tag: string;
+    parentHref: string;
+    parentLabel: string;
+  };
 }) {
-  const filters = { ...parseProductFilters(searchParams), category };
-  const items = await queryProducts(filters);
+  const listingParams = parseListingParams(searchParams);
+  const filters = { ...listingParams, category, subCategory: subCategory?.tag };
+  const listing = await queryProductListing(filters, { page: listingParams.page });
+  const items = listing.items;
   const selected = categoryPages.find((page) => page.category === category);
   const heroImage = selected?.image ?? editorialImages.hero;
   const edits = categoryEdits[category ?? 'NEW'];
+  const currentPathname = pathname ?? selected?.href ?? '/new-in';
+  const departments = categorySlug
+    ? shopCategories.find((item) => item.slug === categorySlug)?.subcategories
+    : undefined;
 
   return (
     <div>
@@ -158,7 +178,15 @@ export async function CategoryPage({
             <div className="mb-7 flex items-center gap-2 text-sm text-[#6B6B68]">
               <Link href="/">Home</Link>
               <span>/</span>
-              <span className="text-[#1C1C1A]">{title}</span>
+              {subCategory ? (
+                <>
+                  <Link href={subCategory.parentHref}>{subCategory.parentLabel}</Link>
+                  <span>/</span>
+                  <span className="text-[#1C1C1A]">{subCategory.label}</span>
+                </>
+              ) : (
+                <span className="text-[#1C1C1A]">{title}</span>
+              )}
             </div>
             <p className="text-xs font-semibold tracking-[0.3em] text-[#A07840] uppercase">
               Aurelia edit
@@ -187,7 +215,10 @@ export async function CategoryPage({
             <h2 className="text-sm font-semibold tracking-[0.22em] uppercase">
               Shop the selection
             </h2>
-            <p className="mt-2 text-sm text-[#6B6B68]">{items.length} refined results</p>
+            <p className="mt-2 text-sm text-[#6B6B68]">
+              {listing.total} refined results
+              {listing.totalPages > 1 ? `, page ${listing.page} of ${listing.totalPages}` : ''}
+            </p>
           </div>
           <p className="max-w-md text-sm leading-6 text-[#6B6B68]">
             Use filters to narrow the collection, then apply once to keep browsing smooth.
@@ -196,28 +227,30 @@ export async function CategoryPage({
 
         <ProductFilters key={JSON.stringify(filters)} initialFilters={filters} />
 
-        <div className="mt-10 grid gap-4 md:grid-cols-2">
-          {edits.map((edit) => (
-            <Link
-              key={edit.href}
-              href={edit.href}
-              className="group relative min-h-64 overflow-hidden rounded-[8px] bg-[#F5F1EB]"
-            >
-              <Image
-                src={edit.image}
-                alt={`${edit.title} edit`}
-                fill
-                sizes="(min-width: 768px) 50vw, 100vw"
-                className="object-cover transition duration-700 group-hover:scale-105"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#1C1C1A]/70 via-[#1C1C1A]/20 to-transparent" />
-              <div className="absolute bottom-6 left-6 max-w-xs text-white">
-                <h2 className="font-display text-4xl leading-none">{edit.title}</h2>
-                <p className="mt-3 text-sm leading-6">{edit.copy}</p>
-              </div>
-            </Link>
-          ))}
-        </div>
+        {!subCategory && (
+          <div className="mt-10 grid gap-4 md:grid-cols-2">
+            {edits.map((edit) => (
+              <Link
+                key={edit.href}
+                href={edit.href}
+                className="group relative min-h-64 overflow-hidden rounded-[8px] bg-[#F5F1EB]"
+              >
+                <Image
+                  src={edit.image}
+                  alt={`${edit.title} edit`}
+                  fill
+                  sizes="(min-width: 768px) 50vw, 100vw"
+                  className="object-cover transition duration-700 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#1C1C1A]/70 via-[#1C1C1A]/20 to-transparent" />
+                <div className="absolute bottom-6 left-6 max-w-xs text-white">
+                  <h2 className="font-display text-4xl leading-none">{edit.title}</h2>
+                  <p className="mt-3 text-sm leading-6">{edit.copy}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
 
         <div className="relative mt-8 overflow-hidden rounded-[8px] bg-[#F5F1EB]">
           <div className="relative h-56 w-full">
@@ -243,10 +276,58 @@ export async function CategoryPage({
           </div>
         </div>
 
-        <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {items.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
+        <div className="mt-8 grid gap-8 lg:grid-cols-[220px_1fr]">
+          {departments && (
+            <aside className="border-y border-[#EAE5DF] py-5 lg:border-y-0 lg:border-r lg:pr-6">
+              <h2 className="text-xs font-semibold tracking-[0.2em] uppercase">Department</h2>
+              <div className="mt-4 grid gap-2 text-sm">
+                <Link
+                  href={`/${categorySlug}`}
+                  className={!subCategory ? 'font-semibold text-[#A07840]' : 'text-[#2D2D2D] hover:text-[#A07840]'}
+                >
+                  All {selected?.title ?? title}
+                </Link>
+                {departments.map((department) => (
+                  <Link
+                    key={department.slug}
+                    href={`/${categorySlug}/${department.slug}`}
+                    className={
+                      subCategory?.tag === department.tag
+                        ? 'font-semibold text-[#A07840]'
+                        : 'text-[#2D2D2D] hover:text-[#A07840]'
+                    }
+                  >
+                    {department.label}
+                  </Link>
+                ))}
+              </div>
+            </aside>
+          )}
+          <div>
+            {items.length === 0 ? (
+              <div className="rounded-[8px] border border-[#EAE5DF] bg-white p-8 text-center">
+                <h2 className="font-display text-3xl">No products found</h2>
+                <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-[#6B6B68]">
+                  Try clearing a filter or browsing the full department.
+                </p>
+                <ButtonLink href={currentPathname} className="mt-5 border-[#1C1C1A] bg-[#1C1C1A]">
+                  Clear All
+                </ButtonLink>
+              </div>
+            ) : (
+              <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+                {items.map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
+            )}
+            <ProductPagination
+              pathname={currentPathname}
+              searchParams={searchParams ?? {}}
+              page={listing.page}
+              totalPages={listing.totalPages}
+            />
+          </div>
         </div>
       </section>
     </div>

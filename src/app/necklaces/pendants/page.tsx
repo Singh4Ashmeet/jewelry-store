@@ -10,9 +10,17 @@ export default async function Page({
   return (
     <CategoryPage
       category="NECKLACE"
+      categorySlug="necklaces"
       title="Pendants"
       copy="Fine pendants, layered chains, and pearl collars designed to frame every neckline."
+      pathname="/necklaces/pendants"
       searchParams={await searchParams}
+      subCategory={{
+        label: 'Pendants',
+        tag: 'pendants',
+        parentHref: '/necklaces',
+        parentLabel: 'Necklaces',
+      }}
     />
   );
 }

@@ -1,21 +1,19 @@
 import type { Prisma } from "@prisma/client";
 import { products } from "@/lib/data";
+import {
+  buildProductWhere,
+  DEFAULT_PAGE_SIZE,
+  gemstoneOptions,
+  parseProductFilters,
+  productMatchesGemstone,
+  productMatchesSubCategory,
+  type ProductFilterInput,
+  type ProductSort,
+} from "@/lib/filterUtils";
 import type { MetalType, Product, ProductCategory } from "@/types";
 
-export type ProductSort = "price-asc" | "price-desc" | "newest" | "popular";
-
-export type ProductFilterInput = {
-  q?: string;
-  category?: ProductCategory;
-  minPrice?: number;
-  maxPrice?: number;
-  metals?: MetalType[];
-  gemstones?: string[];
-  inStock?: boolean;
-  onSale?: boolean;
-  sort?: ProductSort;
-  limit?: number;
-};
+export { gemstoneOptions, parseProductFilters };
+export type { ProductFilterInput, ProductSort };
 
 type ProductWithRelations = Prisma.ProductGetPayload<{
   include: { images: true; variants: true; reviews: { include: { user: true } } };
@@ -29,35 +27,14 @@ const metalLabels: Record<MetalType, string[]> = {
   SILVER: ["silver"],
 };
 
-export const gemstoneOptions = ["diamond", "ruby", "emerald", "pearl"];
-
-export function parseProductFilters(searchParams?: Record<string, string | string[] | undefined>): ProductFilterInput {
-  const value = (key: string) => {
-    const entry = searchParams?.[key];
-    return Array.isArray(entry) ? entry[0] : entry;
-  };
-  const list = (key: string) => value(key)?.split(",").filter(Boolean) ?? [];
-  const numberValue = (key: string) => {
-    const parsed = Number(value(key));
-    return Number.isFinite(parsed) ? parsed : undefined;
-  };
-
-  return {
-    q: value("q")?.trim(),
-    minPrice: numberValue("min"),
-    maxPrice: numberValue("max"),
-    metals: list("metal")
-      .map((metal) => metal.toUpperCase().replace("-", "_"))
-      .filter((metal): metal is MetalType => ["YELLOW_GOLD", "ROSE_GOLD", "WHITE_GOLD", "PLATINUM", "SILVER"].includes(metal)),
-    gemstones: list("gem"),
-    inStock: value("stock") === "in",
-    onSale: value("sale") === "true",
-    sort: (value("sort") as ProductSort | undefined) ?? "popular",
-  };
-}
-
 export function getReviewCount(product: Product) {
   return product.reviews?.length || 74 + Number(product.id.replace(/\D/g, "") || 1) * 7;
+}
+
+function getAverageRating(product: Product) {
+  const reviews = product.reviews ?? [];
+  if (!reviews.length) return 0;
+  return reviews.reduce((total, review) => total + review.rating, 0) / reviews.length;
 }
 
 export function filterLocalProducts(filters: ProductFilterInput) {
@@ -70,17 +47,16 @@ export function filterLocalProducts(filters: ProductFilterInput) {
     );
   }
   if (filters.category) result = result.filter((product) => product.category === filters.category);
+  if (filters.subCategory) result = result.filter((product) => productMatchesSubCategory(product, filters.subCategory!));
   if (filters.minPrice !== undefined) result = result.filter((product) => product.basePrice >= filters.minPrice!);
   if (filters.maxPrice !== undefined) result = result.filter((product) => product.basePrice <= filters.maxPrice!);
   if (filters.metals?.length) {
     result = result.filter((product) => product.variants.some((variant) => filters.metals?.includes(variant.metal)));
   }
   if (filters.gemstones?.length) {
-    result = result.filter((product) => {
-      const haystack = `${product.name} ${product.description} ${product.tags.join(" ")}`.toLowerCase();
-      return filters.gemstones?.some((gemstone) => haystack.includes(gemstone));
-    });
+    result = result.filter((product) => filters.gemstones?.some((gemstone) => productMatchesGemstone(product, gemstone)));
   }
+  if (filters.minRating) result = result.filter((product) => getAverageRating(product) >= filters.minRating!);
   if (filters.inStock) result = result.filter((product) => product.variants.some((variant) => variant.stock > 0));
   if (filters.onSale) result = result.filter((product) => product.compareAt !== null);
 
@@ -108,61 +84,58 @@ function toProduct(product: ProductWithRelations): Product {
   };
 }
 
-function prismaWhere(filters: ProductFilterInput): Prisma.ProductWhereInput {
-  return {
-    isActive: true,
-    category: filters.category,
-    basePrice: {
-      gte: filters.minPrice,
-      lte: filters.maxPrice,
-    },
-    compareAt: filters.onSale ? { not: null } : undefined,
-    variants: filters.metals?.length || filters.inStock
-      ? {
-          some: {
-            metal: filters.metals?.length ? { in: filters.metals } : undefined,
-            stock: filters.inStock ? { gt: 0 } : undefined,
-          },
-        }
-      : undefined,
-  };
+function orderBy(sort: ProductSort | undefined) {
+  if (sort === "price-asc") return { basePrice: "asc" as const };
+  if (sort === "price-desc") return { basePrice: "desc" as const };
+  if (sort === "newest") return { createdAt: "desc" as const };
+  return { reviews: { _count: "desc" as const } };
+}
+
+export async function queryProductListing(
+  filters: ProductFilterInput,
+  options: { page?: number; pageSize?: number } = {},
+) {
+  const pageSize = options.pageSize ?? DEFAULT_PAGE_SIZE;
+  const page = Math.max(1, options.page ?? 1);
+  const skip = (page - 1) * pageSize;
+
+  try {
+    const { prisma } = await import("@/lib/prisma");
+    const where = buildProductWhere(filters);
+    const [total, productsFromDb] = await prisma.$transaction([
+      prisma.product.count({ where }),
+      prisma.product.findMany({
+        where,
+        include: { images: true, variants: true, reviews: { include: { user: true } } },
+        orderBy: orderBy(filters.sort),
+        skip,
+        take: pageSize,
+      }),
+    ]);
+
+    return {
+      items: productsFromDb.map(toProduct),
+      total,
+      page,
+      pageSize,
+      totalPages: Math.max(1, Math.ceil(total / pageSize)),
+    };
+  } catch {
+    const allItems = filterLocalProducts(filters);
+    const total = allItems.length;
+    return {
+      items: allItems.slice(skip, skip + pageSize),
+      total,
+      page,
+      pageSize,
+      totalPages: Math.max(1, Math.ceil(total / pageSize)),
+    };
+  }
 }
 
 export async function queryProducts(filters: ProductFilterInput) {
-  try {
-    const { prisma } = await import("@/lib/prisma");
-    const where = prismaWhere(filters);
-    const matchingIds = filters.q
-      ? await prisma.$queryRaw<{ id: string }[]>`
-          SELECT id
-          FROM "Product"
-          WHERE to_tsvector('english', coalesce(name, '') || ' ' || coalesce(description, '') || ' ' || category::text)
-            @@ plainto_tsquery('english', ${filters.q})
-          LIMIT ${filters.limit ?? 24}
-        `
-      : null;
-
-    const productsFromDb = await prisma.product.findMany({
-      where: {
-        ...where,
-        id: matchingIds ? { in: matchingIds.map((item) => item.id) } : undefined,
-      },
-      include: { images: true, variants: true, reviews: { include: { user: true } } },
-      orderBy:
-        filters.sort === "price-asc"
-          ? { basePrice: "asc" }
-          : filters.sort === "price-desc"
-            ? { basePrice: "desc" }
-            : filters.sort === "newest"
-              ? { createdAt: "desc" }
-              : { reviews: { _count: "desc" } },
-      take: filters.limit ?? 24,
-    });
-
-    return productsFromDb.map(toProduct);
-  } catch {
-    return filterLocalProducts(filters);
-  }
+  const listing = await queryProductListing(filters, { page: 1, pageSize: filters.limit ?? 24 });
+  return listing.items;
 }
 
 export function getRelatedProducts(product: Product, count = 4) {

@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { ProductCard } from "@/components/common/product-card";
 import { ErrorAlert } from "@/components/common/error-alert";
 import { ProductFilters } from "@/components/product/product-filters";
-import { parseProductFilters, queryProducts } from "@/lib/product-query";
+import { ProductPagination } from "@/components/product/product-pagination";
+import { parseListingParams } from "@/lib/filterUtils";
+import { queryProductListing } from "@/lib/product-query";
 
 type Props = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -19,19 +21,23 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
 
 export default async function SearchPage({ searchParams }: Props) {
   const params = await searchParams;
-  const filters = parseProductFilters(params);
-  const products = await queryProducts(filters);
+  const listingParams = parseListingParams(params);
+  const listing = await queryProductListing(listingParams, { page: listingParams.page });
+  const products = listing.items;
 
   return (
     <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
       <div className="mb-8">
         <p className="text-xs uppercase tracking-[0.28em] text-[#A07840]">Search</p>
-        <h1 className="mt-3 font-display text-5xl">{filters.q ? `Results for "${filters.q}"` : "Search Aurelia"}</h1>
+        <h1 className="mt-3 font-display text-5xl">{listingParams.q ? `Results for "${listingParams.q}"` : "Search Aurelia"}</h1>
+        <p className="mt-3 text-sm text-[#6B6B68]">
+          {listing.total} results{listing.totalPages > 1 ? `, page ${listing.page} of ${listing.totalPages}` : ""}
+        </p>
       </div>
 
-      <ProductFilters key={JSON.stringify(filters)} initialFilters={filters} />
+      <ProductFilters key={JSON.stringify(listingParams)} initialFilters={listingParams} />
 
-      {filters.q && products.length === 0 && (
+      {products.length === 0 && (
         <div className="mt-6">
           <ErrorAlert title="No matching products" message="Try a broader term, fewer filters, or another category." />
         </div>
@@ -42,6 +48,7 @@ export default async function SearchPage({ searchParams }: Props) {
           <ProductCard key={product.id} product={product} />
         ))}
       </div>
+      <ProductPagination pathname="/search" searchParams={params} page={listing.page} totalPages={listing.totalPages} />
     </section>
   );
 }
