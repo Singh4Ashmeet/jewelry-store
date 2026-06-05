@@ -310,6 +310,7 @@ function tryOnMetadata(category: ProductCategory, name: string): TryOnMetadata |
   if (category === 'RING') {
     return {
       modelUrl: '/models/ring-starter.glb',
+      modelUrls: ['/models/ring-starter.glb'],
       anchorType: 'ring',
       scale: 0.62,
       offset: { x: 0, y: -0.02, z: 0 },
@@ -320,6 +321,7 @@ function tryOnMetadata(category: ProductCategory, name: string): TryOnMetadata |
   if (category === 'BRACELET') {
     return {
       modelUrl: '/models/bracelet-starter.glb',
+      modelUrls: ['/models/bracelet-starter.glb'],
       anchorType: 'bracelet',
       scale: 0.9,
       offset: { x: 0, y: 0.04, z: 0 },
@@ -330,6 +332,7 @@ function tryOnMetadata(category: ProductCategory, name: string): TryOnMetadata |
   if (category === 'EARRING') {
     return {
       modelUrl: '/models/earring-starter.glb',
+      modelUrls: ['/models/earring-starter.glb'],
       anchorType: 'earring',
       scale: 0.38,
       offset: { x: 0, y: 0.03, z: 0 },
@@ -340,6 +343,7 @@ function tryOnMetadata(category: ProductCategory, name: string): TryOnMetadata |
   if (category === 'NECKLACE') {
     return {
       modelUrl: '/models/necklace-starter.glb',
+      modelUrls: ['/models/necklace-starter.glb'],
       anchorType: 'necklace',
       scale: 1.15,
       offset: { x: 0, y: 0.18, z: 0 },
@@ -380,6 +384,20 @@ export const products: Product[] = catalogueItems.map(
           alt: name,
           position: 0,
           isPrimary: true,
+        },
+        {
+          id: `img_${index + 1}_detail`,
+          url: editorialImages.hands,
+          alt: `${name} styling detail`,
+          position: 1,
+          isPrimary: false,
+        },
+        {
+          id: `img_${index + 1}_craft`,
+          url: editorialImages.craft,
+          alt: `${name} craftsmanship detail`,
+          position: 2,
+          isPrimary: false,
         },
       ],
       variants: (['YELLOW_GOLD', 'ROSE_GOLD', 'WHITE_GOLD'] as MetalType[]).map(

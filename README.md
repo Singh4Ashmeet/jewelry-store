@@ -19,10 +19,10 @@ Aurelia Jewellery is a Next.js 13+ e-commerce application for a premium jeweller
 
 Aurelia includes a v1 in-browser virtual try-on experience at `/try-on/[productId]`.
 
-- AR stack: `three` renders starter GLB models and `@mediapipe/tasks-vision` provides hand and face landmarks when camera mode is available.
+- AR stack: `three` renders starter GLB models. `@mediapipe/hands` tracks ring and bracelet placement, while `@mediapipe/face_mesh` tracks earrings and necklace placement. The requested `@mediapipe/handpose` and `@mediapipe/facemesh` package names are not published on npm; these are the current MediaPipe package equivalents.
 - Privacy: camera frames and uploaded photos are processed in-memory in the browser. They are not uploaded or stored by the app unless the user explicitly uses Save & Share.
 - Product metadata: `Product.tryOn` stores `modelUrl`, `anchorType`, scale, offsets, supported metals, and gemstone shape/size options.
-- Model assets: starter GLB files live in `public/models/` with `public/models/try-on-manifest.json`. Replace these with production DRACO-compressed GLB files for launch-quality visuals.
+- Model assets: starter GLB files live in `public/models/` with `public/models/try-on-manifest.json`. Product `tryOn` metadata points to the primary `modelUrl` plus optional `modelUrls`; replace these with production DRACO-compressed GLB files for launch-quality visuals.
 - Commercial upgrade path: Banuba and MirrAR are suitable vendor SDK candidates for production jewelry try-on if you need managed model digitization, vendor support, and higher-precision face/neck/3D hand tracking.
 
 ## Requirements

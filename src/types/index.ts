@@ -49,6 +49,7 @@ export type TryOnAnchorType = 'ring' | 'bracelet' | 'earring' | 'necklace';
 
 export interface TryOnMetadata {
   modelUrl: string;
+  modelUrls?: string[];
   anchorType: TryOnAnchorType;
   scale: number;
   offset: {

@@ -7,11 +7,17 @@ import { toast } from 'sonner';
 import { Button } from '@/components/common/button';
 import { useCursor } from '@/hooks/useCursor';
 import { hasRenderableChildren, loadModel } from '@/lib/loadModel';
+import {
+  detectorKindForAnchor,
+  MediaPipeFaceMeshDetector,
+  MediaPipeHandsDetector,
+  type MediaPipeLandmark,
+} from '@/lib/mediapipe-detectors';
 import { useCartStore } from '@/store/cart-store';
 import { METAL_LABELS, type Product, type ProductVariant, type TryOnAnchorType, type TryOnMetadata } from '@/types';
 
 type ViewerMode = 'camera' | 'photo';
-type Landmark = { x: number; y: number; z?: number };
+type Landmark = MediaPipeLandmark;
 type Transform = { x: number; y: number; z: number; scale: number; rotationZ: number };
 
 const metalColors: Record<string, number> = {
@@ -130,6 +136,8 @@ export function TryOnViewer({ product, tryOn }: { product: Product; tryOn: TryOn
   const controlsRef = useRef({ mode, scale, offsetX, offsetY });
   const photoUrlRef = useRef<string | null>(null);
   const mediaPipeLogCleanupRef = useRef<null | (() => void)>(null);
+  const detectorRef = useRef<MediaPipeHandsDetector | MediaPipeFaceMeshDetector | null>(null);
+  const detectionInFlightRef = useRef(false);
   const pointerCursor = useCursor('pointer');
   const dragCursor = useCursor(isDragging ? 'grabbing' : 'grab');
   const zoomCursor = useCursor('zoom-in');
@@ -150,6 +158,7 @@ export function TryOnViewer({ product, tryOn }: { product: Product; tryOn: TryOn
       streamRef.current?.getTracks().forEach((track) => track.stop());
       if (photoUrlRef.current) URL.revokeObjectURL(photoUrlRef.current);
       mediaPipeLogCleanupRef.current?.();
+      detectorRef.current?.close();
       rendererRef.current?.dispose();
     };
   }, []);
@@ -243,27 +252,29 @@ export function TryOnViewer({ product, tryOn }: { product: Product; tryOn: TryOn
   async function initTracking() {
     try {
       mediaPipeLogCleanupRef.current ??= installMediaPipeLogFilter();
-      const { FaceLandmarker, FilesetResolver, HandLandmarker } = await import('@mediapipe/tasks-vision');
-      const vision = await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm');
-      const common = { baseOptions: { delegate: 'CPU' as const, modelAssetPath: '' }, runningMode: 'VIDEO' as const, numHands: 1 };
-      const hand = tryOn.anchorType === 'ring' || tryOn.anchorType === 'bracelet'
-        ? await HandLandmarker.createFromOptions(vision, { ...common, baseOptions: { delegate: 'CPU', modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task' } })
-        : null;
-      const face = !hand
-        ? await FaceLandmarker.createFromOptions(vision, { baseOptions: { delegate: 'CPU', modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task' }, runningMode: 'VIDEO', numFaces: 1 })
-        : null;
+      detectorRef.current?.close();
+      detectorRef.current =
+        detectorKindForAnchor(tryOn.anchorType) === 'hands'
+          ? new MediaPipeHandsDetector()
+          : new MediaPipeFaceMeshDetector();
+      await detectorRef.current.init();
 
-      const detect = () => {
+      const detect = async () => {
         const video = videoRef.current;
         if (!video || video.readyState < 2 || controlsRef.current.mode !== 'camera') return;
-        const now = performance.now();
-        const result = hand?.detectForVideo(video, now).landmarks[0] ?? face?.detectForVideo(video, now).faceLandmarks[0];
-        const transform = result ? calculateAnchorTransform(tryOn.anchorType, result, video.videoWidth, video.videoHeight) : null;
-        const controls = controlsRef.current;
-        if (transform && modelRef.current) {
-          modelRef.current.position.set(transform.x + controls.offsetX, transform.y + controls.offsetY, transform.z);
-          modelRef.current.scale.setScalar(Math.max(0.05, controls.scale * transform.scale * 3));
-          modelRef.current.rotation.z = transform.rotationZ;
+        if (!detectionInFlightRef.current) {
+          detectionInFlightRef.current = true;
+          const result = await detectorRef.current?.detect(video);
+          detectionInFlightRef.current = false;
+          const transform = result
+            ? calculateAnchorTransform(tryOn.anchorType, result, video.videoWidth, video.videoHeight)
+            : null;
+          const controls = controlsRef.current;
+          if (transform && modelRef.current) {
+            modelRef.current.position.set(transform.x + controls.offsetX, transform.y + controls.offsetY, transform.z);
+            modelRef.current.scale.setScalar(Math.max(0.05, controls.scale * transform.scale * 3));
+            modelRef.current.rotation.z = transform.rotationZ;
+          }
         }
         trackingFrameRef.current = requestAnimationFrame(detect);
       };

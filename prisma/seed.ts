@@ -33,6 +33,15 @@ async function main() {
         isBestseller: product.isBestseller,
         tags: product.tags,
         tryOn: product.tryOn,
+        images: {
+          deleteMany: {},
+          create: product.images.map((image) => ({
+            url: image.url,
+            alt: image.alt,
+            position: image.position,
+            isPrimary: image.isPrimary,
+          })),
+        },
       },
       create: {
         name: product.name,
@@ -48,7 +57,12 @@ async function main() {
         tags: product.tags,
         tryOn: product.tryOn,
         images: {
-          create: [{ url: `/mock/${product.slug}.jpg`, alt: product.name, isPrimary: true }],
+          create: product.images.map((image) => ({
+            url: image.url,
+            alt: image.alt,
+            position: image.position,
+            isPrimary: image.isPrimary,
+          })),
         },
         variants: {
           create: product.variants.map((variant) => ({
