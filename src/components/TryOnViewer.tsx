@@ -22,6 +22,44 @@ const metalColors: Record<string, number> = {
   SILVER: 0xcfd4d9,
 };
 
+const benignMediaPipeLogSnippets = [
+  'OpenGL error checking is disabled',
+  'Created TensorFlow Lite XNNPACK delegate for CPU',
+  'Feedback manager requires a model with a single signature inference',
+  'Using NORM_RECT without IMAGE_DIMENSIONS',
+];
+
+export function shouldSuppressMediaPipeLog(args: unknown[]) {
+  const text = args
+    .map((arg) => (typeof arg === 'string' ? arg : ''))
+    .join(' ');
+  return benignMediaPipeLogSnippets.some((snippet) => text.includes(snippet));
+}
+
+function installMediaPipeLogFilter() {
+  const original = {
+    error: console.error.bind(console),
+    info: console.info.bind(console),
+    warn: console.warn.bind(console),
+  };
+
+  console.error = (...args: unknown[]) => {
+    if (!shouldSuppressMediaPipeLog(args)) original.error(...args);
+  };
+  console.info = (...args: unknown[]) => {
+    if (!shouldSuppressMediaPipeLog(args)) original.info(...args);
+  };
+  console.warn = (...args: unknown[]) => {
+    if (!shouldSuppressMediaPipeLog(args)) original.warn(...args);
+  };
+
+  return () => {
+    console.error = original.error;
+    console.info = original.info;
+    console.warn = original.warn;
+  };
+}
+
 export function calculateAnchorTransform(
   anchorType: TryOnAnchorType,
   landmarks: Landmark[],
@@ -91,6 +129,7 @@ export function TryOnViewer({ product, tryOn }: { product: Product; tryOn: TryOn
   const trackingFrameRef = useRef<number | null>(null);
   const controlsRef = useRef({ mode, scale, offsetX, offsetY });
   const photoUrlRef = useRef<string | null>(null);
+  const mediaPipeLogCleanupRef = useRef<null | (() => void)>(null);
   const pointerCursor = useCursor('pointer');
   const dragCursor = useCursor(isDragging ? 'grabbing' : 'grab');
   const zoomCursor = useCursor('zoom-in');
@@ -110,6 +149,7 @@ export function TryOnViewer({ product, tryOn }: { product: Product; tryOn: TryOn
       if (trackingFrameRef.current) cancelAnimationFrame(trackingFrameRef.current);
       streamRef.current?.getTracks().forEach((track) => track.stop());
       if (photoUrlRef.current) URL.revokeObjectURL(photoUrlRef.current);
+      mediaPipeLogCleanupRef.current?.();
       rendererRef.current?.dispose();
     };
   }, []);
@@ -202,14 +242,15 @@ export function TryOnViewer({ product, tryOn }: { product: Product; tryOn: TryOn
 
   async function initTracking() {
     try {
+      mediaPipeLogCleanupRef.current ??= installMediaPipeLogFilter();
       const { FaceLandmarker, FilesetResolver, HandLandmarker } = await import('@mediapipe/tasks-vision');
       const vision = await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm');
-      const common = { baseOptions: { modelAssetPath: '' }, runningMode: 'VIDEO' as const, numHands: 1 };
+      const common = { baseOptions: { delegate: 'CPU' as const, modelAssetPath: '' }, runningMode: 'VIDEO' as const, numHands: 1 };
       const hand = tryOn.anchorType === 'ring' || tryOn.anchorType === 'bracelet'
-        ? await HandLandmarker.createFromOptions(vision, { ...common, baseOptions: { modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task' } })
+        ? await HandLandmarker.createFromOptions(vision, { ...common, baseOptions: { delegate: 'CPU', modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task' } })
         : null;
       const face = !hand
-        ? await FaceLandmarker.createFromOptions(vision, { baseOptions: { modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task' }, runningMode: 'VIDEO', numFaces: 1 })
+        ? await FaceLandmarker.createFromOptions(vision, { baseOptions: { delegate: 'CPU', modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task' }, runningMode: 'VIDEO', numFaces: 1 })
         : null;
 
       const detect = () => {

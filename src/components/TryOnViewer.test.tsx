@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { calculateAnchorTransform, TryOnViewer } from '@/components/TryOnViewer';
+import { calculateAnchorTransform, shouldSuppressMediaPipeLog, TryOnViewer } from '@/components/TryOnViewer';
 import { products } from '@/lib/data';
 
 jest.mock('@/lib/loadModel', () => ({
@@ -27,5 +27,10 @@ describe('TryOnViewer', () => {
     expect(calculateAnchorTransform('ring', landmarks, 1000, 800)).toEqual(
       expect.objectContaining({ x: expect.any(Number), y: expect.any(Number), scale: expect.any(Number) }),
     );
+  });
+
+  it('suppresses only known benign MediaPipe diagnostics', () => {
+    expect(shouldSuppressMediaPipeLog(['INFO: Created TensorFlow Lite XNNPACK delegate for CPU.'])).toBe(true);
+    expect(shouldSuppressMediaPipeLog(['Application failed to render'])).toBe(false);
   });
 });
