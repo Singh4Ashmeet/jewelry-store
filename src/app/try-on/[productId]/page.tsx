@@ -39,8 +39,11 @@ function toProduct(product: NonNullable<DbProduct>): Product {
 }
 
 async function getTryOnProduct(productId: string) {
+  const localProduct = getProductByTryOnId(productId);
+  if (localProduct) return localProduct;
+
   const fromDb = await fetchProductFromDb(productId);
-  return fromDb ? toProduct(fromDb) : getProductByTryOnId(productId);
+  return fromDb ? toProduct(fromDb) : undefined;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {

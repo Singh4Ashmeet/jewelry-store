@@ -87,7 +87,10 @@ export function TryOnViewer({ product, tryOn }: { product: Product; tryOn: TryOn
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.OrthographicCamera | null>(null);
   const modelRef = useRef<THREE.Object3D | null>(null);
-  const frameRef = useRef<number | null>(null);
+  const renderFrameRef = useRef<number | null>(null);
+  const trackingFrameRef = useRef<number | null>(null);
+  const controlsRef = useRef({ mode, scale, offsetX, offsetY });
+  const photoUrlRef = useRef<string | null>(null);
   const pointerCursor = useCursor('pointer');
   const dragCursor = useCursor(isDragging ? 'grabbing' : 'grab');
   const zoomCursor = useCursor('zoom-in');
@@ -98,13 +101,18 @@ export function TryOnViewer({ product, tryOn }: { product: Product; tryOn: TryOn
   );
 
   useEffect(() => {
+    controlsRef.current = { mode, scale, offsetX, offsetY };
+  }, [mode, offsetX, offsetY, scale]);
+
+  useEffect(() => {
     return () => {
-      if (frameRef.current) cancelAnimationFrame(frameRef.current);
+      if (renderFrameRef.current) cancelAnimationFrame(renderFrameRef.current);
+      if (trackingFrameRef.current) cancelAnimationFrame(trackingFrameRef.current);
       streamRef.current?.getTracks().forEach((track) => track.stop());
-      if (photoUrl) URL.revokeObjectURL(photoUrl);
+      if (photoUrlRef.current) URL.revokeObjectURL(photoUrlRef.current);
       rendererRef.current?.dispose();
     };
-  }, [photoUrl]);
+  }, []);
 
   useEffect(() => {
     if (!privacyAccepted) return;
@@ -206,16 +214,17 @@ export function TryOnViewer({ product, tryOn }: { product: Product; tryOn: TryOn
 
       const detect = () => {
         const video = videoRef.current;
-        if (!video || video.readyState < 2 || mode !== 'camera') return;
+        if (!video || video.readyState < 2 || controlsRef.current.mode !== 'camera') return;
         const now = performance.now();
         const result = hand?.detectForVideo(video, now).landmarks[0] ?? face?.detectForVideo(video, now).faceLandmarks[0];
         const transform = result ? calculateAnchorTransform(tryOn.anchorType, result, video.videoWidth, video.videoHeight) : null;
+        const controls = controlsRef.current;
         if (transform && modelRef.current) {
-          modelRef.current.position.set(transform.x + offsetX, transform.y + offsetY, transform.z);
-          modelRef.current.scale.setScalar(Math.max(0.05, scale * transform.scale * 3));
+          modelRef.current.position.set(transform.x + controls.offsetX, transform.y + controls.offsetY, transform.z);
+          modelRef.current.scale.setScalar(Math.max(0.05, controls.scale * transform.scale * 3));
           modelRef.current.rotation.z = transform.rotationZ;
         }
-        frameRef.current = requestAnimationFrame(detect);
+        trackingFrameRef.current = requestAnimationFrame(detect);
       };
       detect();
     } catch {
@@ -229,19 +238,22 @@ export function TryOnViewer({ product, tryOn }: { product: Product; tryOn: TryOn
     const camera = cameraRef.current;
     const model = modelRef.current;
     if (renderer && scene && camera) {
-      if (model && mode === 'photo') {
-        model.position.set(offsetX, offsetY, 0);
-        model.scale.setScalar(scale * 0.45);
+      const controls = controlsRef.current;
+      if (model && controls.mode === 'photo') {
+        model.position.set(controls.offsetX, controls.offsetY, 0);
+        model.scale.setScalar(controls.scale * 0.45);
       }
       renderer.render(scene, camera);
     }
-    frameRef.current = requestAnimationFrame(renderLoop);
+    renderFrameRef.current = requestAnimationFrame(renderLoop);
   }
 
   function handlePhoto(file?: File | null) {
     if (!file) return;
-    if (photoUrl) URL.revokeObjectURL(photoUrl);
-    setPhotoUrl(URL.createObjectURL(file));
+    if (photoUrlRef.current) URL.revokeObjectURL(photoUrlRef.current);
+    const nextPhotoUrl = URL.createObjectURL(file);
+    photoUrlRef.current = nextPhotoUrl;
+    setPhotoUrl(nextPhotoUrl);
     setMode('photo');
     streamRef.current?.getTracks().forEach((track) => track.stop());
     setStatus('Photo mode is active. Drag and resize the model until it aligns.');
