@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "models": {
+    "ring": {
+      "url": "/models/ring-starter.glb",
+      "anchorType": "ring",
+      "draco": false
+    },
+    "bracelet": {
+      "url": "/models/bracelet-starter.glb",
+      "anchorType": "bracelet",
+      "draco": false
+    },
+    "earring": {
+      "url": "/models/earring-starter.glb",
+      "anchorType": "earring",
+      "draco": false
+    },
+    "necklace": {
+      "url": "/models/necklace-starter.glb",
+      "anchorType": "necklace",
+      "draco": false
+    }
+  },
+  "privacy": "Camera and uploaded photos are processed in-memory in the browser and are not uploaded by the app."
+}

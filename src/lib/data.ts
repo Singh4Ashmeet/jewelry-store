@@ -1,4 +1,4 @@
-import type { MetalType, Product, ProductCategory, SalesDataPoint } from '@/types';
+import type { MetalType, Product, ProductCategory, SalesDataPoint, TryOnMetadata } from '@/types';
 
 const now = new Date().toISOString();
 
@@ -305,6 +305,51 @@ function subcategoryTags(category: ProductCategory, name: string, price: number)
   return Array.from(tags);
 }
 
+function tryOnMetadata(category: ProductCategory, name: string): TryOnMetadata | null {
+  const lower = name.toLowerCase();
+  if (category === 'RING') {
+    return {
+      modelUrl: '/models/ring-starter.glb',
+      anchorType: 'ring',
+      scale: 0.62,
+      offset: { x: 0, y: -0.02, z: 0 },
+      supportedMetals: ['YELLOW_GOLD', 'ROSE_GOLD', 'WHITE_GOLD'],
+      gemstones: [{ shape: lower.includes('oval') ? 'oval' : 'round', size: 'medium' }],
+    };
+  }
+  if (category === 'BRACELET') {
+    return {
+      modelUrl: '/models/bracelet-starter.glb',
+      anchorType: 'bracelet',
+      scale: 0.9,
+      offset: { x: 0, y: 0.04, z: 0 },
+      supportedMetals: ['YELLOW_GOLD', 'ROSE_GOLD', 'WHITE_GOLD'],
+      gemstones: [{ shape: lower.includes('emerald') ? 'emerald' : 'round', size: 'small' }],
+    };
+  }
+  if (category === 'EARRING') {
+    return {
+      modelUrl: '/models/earring-starter.glb',
+      anchorType: 'earring',
+      scale: 0.38,
+      offset: { x: 0, y: 0.03, z: 0 },
+      supportedMetals: ['YELLOW_GOLD', 'ROSE_GOLD', 'WHITE_GOLD'],
+      gemstones: [{ shape: lower.includes('pearl') ? 'pearl' : 'round', size: 'small' }],
+    };
+  }
+  if (category === 'NECKLACE') {
+    return {
+      modelUrl: '/models/necklace-starter.glb',
+      anchorType: 'necklace',
+      scale: 1.15,
+      offset: { x: 0, y: 0.18, z: 0 },
+      supportedMetals: ['YELLOW_GOLD', 'ROSE_GOLD', 'WHITE_GOLD'],
+      gemstones: [{ shape: lower.includes('pearl') ? 'pearl' : 'round', size: 'medium' }],
+    };
+  }
+  return null;
+}
+
 export const products: Product[] = catalogueItems.map(
   ([name, category, price, featured, isNew, image], index) => {
     const slug = name
@@ -326,6 +371,7 @@ export const products: Product[] = catalogueItems.map(
       isBestseller: index % 4 === 0,
       isActive: true,
       tags: ['18k finish', 'gift ready', category.toLowerCase(), ...subcategoryTags(category, name, price)],
+      tryOn: tryOnMetadata(category, name),
       createdAt: now,
       images: [
         {
@@ -386,6 +432,10 @@ export const salesData: SalesDataPoint[] = [
 
 export function getProduct(slug: string) {
   return products.find((product) => product.slug === slug);
+}
+
+export function getProductByTryOnId(productId: string) {
+  return products.find((product) => product.id === productId || product.slug === productId);
 }
 
 export function getProductsByCategory(category?: ProductCategory) {

@@ -38,10 +38,29 @@ export interface Product {
   isBestseller: boolean;
   isActive: boolean;
   tags: string[];
+  tryOn?: TryOnMetadata | null;
   variants: ProductVariant[];
   images: ProductImage[];
   reviews?: Review[];
   createdAt: string;
+}
+
+export type TryOnAnchorType = 'ring' | 'bracelet' | 'earring' | 'necklace';
+
+export interface TryOnMetadata {
+  modelUrl: string;
+  anchorType: TryOnAnchorType;
+  scale: number;
+  offset: {
+    x: number;
+    y: number;
+    z: number;
+  };
+  supportedMetals: MetalType[];
+  gemstones: Array<{
+    shape: string;
+    size: string;
+  }>;
 }
 
 export interface Review {

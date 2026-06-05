@@ -69,7 +69,7 @@ describe('filter utils', () => {
       sort: 'price-desc',
     });
 
-    expect(params.toString()).toBe('q=ring&utm=nav&min=100&max=500&metal=YELLOW_GOLD&gem=diamond&sort=price-desc');
+    expect(params.toString()).toBe('q=ring&utm=nav&page=1&min=100&max=500&metal=YELLOW_GOLD&gem=diamond&sort=price-desc');
   });
 
   it('clears only known filter params and pagination', () => {

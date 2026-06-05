@@ -119,7 +119,7 @@ export function buildFilterSearchParams(
   setOrDelete('sale', filters.onSale ? 'true' : undefined);
   setOrDelete('sort', filters.sort && filters.sort !== 'popular' ? filters.sort : undefined);
 
-  if (options.resetPage !== false) params.delete('page');
+  if (options.resetPage !== false) params.set('page', '1');
   return params;
 }
 

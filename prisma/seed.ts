@@ -32,6 +32,7 @@ async function main() {
         isNew: product.isNew,
         isBestseller: product.isBestseller,
         tags: product.tags,
+        tryOn: product.tryOn,
       },
       create: {
         name: product.name,
@@ -45,6 +46,7 @@ async function main() {
         isNew: product.isNew,
         isBestseller: product.isBestseller,
         tags: product.tags,
+        tryOn: product.tryOn,
         images: {
           create: [{ url: `/mock/${product.slug}.jpg`, alt: product.name, isPrimary: true }],
         },

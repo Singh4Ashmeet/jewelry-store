@@ -54,15 +54,25 @@ export function ProductFilters({
     ].filter(Boolean).length;
   }, [draft]);
 
+  const hasUnsavedChanges = useMemo(() => {
+    const normalize = (filters: ProductFilterInput) =>
+      JSON.stringify({
+        minPrice: filters.minPrice,
+        maxPrice: filters.maxPrice,
+        metals: [...(filters.metals ?? [])].sort(),
+        gemstones: [...(filters.gemstones ?? [])].sort(),
+        minRating: filters.minRating,
+        inStock: Boolean(filters.inStock),
+        onSale: Boolean(filters.onSale),
+        sort: filters.sort ?? 'popular',
+      });
+    return normalize(draft) !== normalize(initialFilters);
+  }, [draft, initialFilters]);
+
   function commit(nextFilters = draft) {
     const params = buildFilterSearchParams(searchParams.toString(), nextFilters);
     const query = params.toString();
     router.push(query ? `${pathname}?${query}` : pathname, { scroll: false });
-  }
-
-  function setDraftAndCommit(nextFilters: ProductFilterInput) {
-    setDraft(nextFilters);
-    commit(nextFilters);
   }
 
   function clearFilters() {
@@ -120,10 +130,12 @@ export function ProductFilters({
             Clear
           </button>
           <button
-            className="h-10 bg-[#1C1C1A] px-5 text-xs font-semibold tracking-[0.16em] text-white uppercase"
+            className={`h-10 px-5 text-xs font-semibold tracking-[0.16em] text-white uppercase transition ${
+              hasUnsavedChanges ? 'bg-[#B58E62] shadow-lg shadow-[#B58E62]/25' : 'bg-[#1C1C1A]'
+            }`}
             type="submit"
           >
-            Apply Filters
+            {hasUnsavedChanges ? 'Apply Filters*' : 'Apply Filters'}
           </button>
         </div>
       </div>
@@ -175,15 +187,10 @@ export function ProductFilters({
                     className="h-4 w-4 accent-[#B58E62]"
                     checked={draft.metals?.includes(metal) ?? false}
                     onChange={(event) => {
-                      const next = {
+                      setDraft({
                         ...draft,
-                        metals: updateList(
-                          draft.metals,
-                          metal,
-                          event.target.checked,
-                        ) as MetalType[],
-                      };
-                      setDraftAndCommit(next);
+                        metals: updateList(draft.metals, metal, event.target.checked) as MetalType[],
+                      });
                     }}
                   />
                   {METAL_LABELS[metal]}
@@ -207,11 +214,10 @@ export function ProductFilters({
                     className="h-4 w-4 accent-[#B58E62]"
                     checked={draft.gemstones?.includes(gemstone) ?? false}
                     onChange={(event) => {
-                      const next = {
+                      setDraft({
                         ...draft,
                         gemstones: updateList(draft.gemstones, gemstone, event.target.checked),
-                      };
-                      setDraftAndCommit(next);
+                      });
                     }}
                   />
                   {gemstone}
@@ -227,7 +233,7 @@ export function ProductFilters({
             <select
               className="h-11 border border-[#EAE5DF] bg-[#FCFAF8] px-3 outline-none focus:border-[#B58E62]"
               value={draft.sort ?? 'popular'}
-              onChange={(event) => setDraftAndCommit({ ...draft, sort: event.target.value as ProductSort })}
+              onChange={(event) => setDraft({ ...draft, sort: event.target.value as ProductSort })}
             >
               {sortOptions.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -241,7 +247,7 @@ export function ProductFilters({
               className="h-4 w-4 accent-[#B58E62]"
               type="checkbox"
               checked={draft.inStock ?? false}
-              onChange={(event) => setDraftAndCommit({ ...draft, inStock: event.target.checked })}
+              onChange={(event) => setDraft({ ...draft, inStock: event.target.checked })}
             />
             In stock
           </label>
@@ -250,7 +256,7 @@ export function ProductFilters({
               className="h-4 w-4 accent-[#B58E62]"
               type="checkbox"
               checked={draft.onSale ?? false}
-              onChange={(event) => setDraftAndCommit({ ...draft, onSale: event.target.checked })}
+              onChange={(event) => setDraft({ ...draft, onSale: event.target.checked })}
             />
             On sale
           </label>
@@ -260,7 +266,7 @@ export function ProductFilters({
               className="h-11 border border-[#EAE5DF] bg-[#FCFAF8] px-3 outline-none focus:border-[#B58E62]"
               value={draft.minRating ?? ''}
               onChange={(event) =>
-                setDraftAndCommit({
+                setDraft({
                   ...draft,
                   minRating: event.target.value ? Number(event.target.value) : undefined,
                 })

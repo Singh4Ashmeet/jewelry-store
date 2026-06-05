@@ -10,7 +10,7 @@ import {
   type ProductFilterInput,
   type ProductSort,
 } from "@/lib/filterUtils";
-import type { MetalType, Product, ProductCategory } from "@/types";
+import type { MetalType, Product, ProductCategory, TryOnMetadata } from "@/types";
 
 export { gemstoneOptions, parseProductFilters };
 export type { ProductFilterInput, ProductSort };
@@ -74,6 +74,7 @@ function toProduct(product: ProductWithRelations): Product {
   return {
     ...product,
     category: product.category as ProductCategory,
+    tryOn: product.tryOn as TryOnMetadata | null,
     createdAt: product.createdAt.toISOString(),
     reviews: product.reviews.map((review) => ({
       ...review,

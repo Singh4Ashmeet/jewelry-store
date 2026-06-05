@@ -2,10 +2,12 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Heart, Star } from "lucide-react";
+import { Heart, ShoppingBag, Sparkles, Star } from "lucide-react";
 import type { Product } from "@/types";
 import { formatPrice } from "@/lib/utils";
 import { useWishlistStore } from "@/store/wishlist-store";
+import { useCartStore } from "@/store/cart-store";
+import { cursorFor, interactiveCursor } from "@/lib/cursor";
 
 export function ProductVisual({
   name,
@@ -43,10 +45,29 @@ export function ProductCard({ product, compact = false }: { product: Product; co
   const reviewCount = 74 + Number(product.id.replace(/\D/g, "") || 1) * 7;
   const toggleWishlist = useWishlistStore((state) => state.toggleItem);
   const isWishlisted = useWishlistStore((state) => state.hasItem(product.id));
+  const addItem = useCartStore((state) => state.addItem);
   const image = product.images[0];
+  const firstVariant = product.variants[0];
+
+  function quickAdd() {
+    if (!firstVariant) return;
+    addItem({
+      productId: product.id,
+      variantId: firstVariant.id,
+      name: product.name,
+      slug: product.slug,
+      image: image?.url ?? "",
+      metal: firstVariant.metal,
+      size: firstVariant.size,
+      price: firstVariant.price,
+      quantity: 1,
+      stock: firstVariant.stock,
+      sku: firstVariant.sku,
+    });
+  }
 
   return (
-    <article className="group rounded-[8px] bg-[#FCFAF8]">
+    <article className={`group rounded-[8px] bg-[#FCFAF8] transition duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-[#1C1C1A]/10 ${cursorFor("pointer")}`}>
       <div className="relative overflow-hidden rounded-[8px] bg-[#F5F1EB]">
         <Link href={`/product/${product.slug}`} className="block" aria-label={`View ${product.name}`}>
           <ProductVisual
@@ -58,7 +79,7 @@ export function ProductCard({ product, compact = false }: { product: Product; co
           />
         </Link>
         <button
-          className="absolute right-4 top-4 rounded-full bg-white/80 p-2 text-[#2D2D2D] shadow-sm backdrop-blur"
+          className={`absolute right-4 top-4 rounded-full bg-white/80 p-2 text-[#2D2D2D] shadow-sm backdrop-blur ${interactiveCursor()}`}
           aria-label={isWishlisted ? `Remove ${product.name} from wishlist` : `Add ${product.name} to wishlist`}
           aria-pressed={isWishlisted}
           onClick={() =>
@@ -79,6 +100,26 @@ export function ProductCard({ product, compact = false }: { product: Product; co
             {product.isNew ? "New" : "Bestseller"}
           </span>
         )}
+        <div className="absolute inset-x-3 bottom-3 flex translate-y-3 gap-2 opacity-0 transition duration-300 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100">
+          <button
+            className={`flex h-10 flex-1 items-center justify-center gap-2 rounded-sm bg-white/95 px-3 text-[11px] font-semibold tracking-[0.14em] uppercase text-[#1C1C1A] shadow-sm backdrop-blur ${interactiveCursor(!firstVariant)}`}
+            onClick={quickAdd}
+            disabled={!firstVariant}
+            type="button"
+          >
+            <ShoppingBag size={14} />
+            Quick Add
+          </button>
+          {product.tryOn && (
+            <Link
+              href={`/try-on/${product.slug}`}
+              className={`flex h-10 items-center justify-center gap-2 rounded-sm bg-[#1C1C1A]/95 px-3 text-[11px] font-semibold tracking-[0.14em] uppercase text-white shadow-sm backdrop-blur ${interactiveCursor()}`}
+            >
+              <Sparkles size={14} />
+              Try
+            </Link>
+          )}
+        </div>
       </div>
       <Link href={`/product/${product.slug}`} className="block">
         <div className="px-1 py-4">

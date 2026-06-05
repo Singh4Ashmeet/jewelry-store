@@ -15,7 +15,7 @@ describe('ProductFilters', () => {
     push.mockClear();
   });
 
-  it('emits onChange and preserves unrelated params when applying filters', async () => {
+  it('keeps edits local until Apply is clicked', async () => {
     const onChange = jest.fn();
     const user = userEvent.setup();
 
@@ -24,7 +24,12 @@ describe('ProductFilters', () => {
     await user.click(screen.getByLabelText('Yellow Gold'));
 
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ metals: ['YELLOW_GOLD'] }));
-    expect(push).toHaveBeenCalledWith('/rings?q=ring&utm=nav&metal=YELLOW_GOLD', { scroll: false });
+    expect(push).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: /apply filters/i })).toHaveClass('bg-[#B58E62]');
+
+    await user.click(screen.getByRole('button', { name: /apply filters/i }));
+
+    expect(push).toHaveBeenCalledWith('/rings?q=ring&utm=nav&page=1&metal=YELLOW_GOLD', { scroll: false });
   });
 
   it('clears filter params without wiping search params', async () => {

@@ -157,6 +157,7 @@ model Product {
   isBestseller Boolean        @default(false)
   isActive    Boolean         @default(true)
   tags        String[]
+  tryOn       Json?
 
   variants ProductVariant[]
   images   ProductImage[]

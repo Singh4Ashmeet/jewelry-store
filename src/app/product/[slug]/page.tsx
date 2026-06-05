@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Gem, Gift, ShieldCheck, Truck } from "lucide-react";
 import { ProductVisual, ProductCard } from "@/components/common/product-card";
+import { ButtonLink } from "@/components/common/button";
 import { AddToCartPanel } from "@/components/product/add-to-cart-panel";
 import { ProductGallery } from "@/components/product/product-gallery";
 import { editorialImages, getProduct, products } from "@/lib/data";
@@ -56,7 +57,14 @@ export default async function ProductPage({ params }: Props) {
         <div className="grid gap-12 lg:grid-cols-[1.05fr_0.95fr]">
           <ProductGallery product={product} gallery={gallery} />
 
-          <AddToCartPanel product={product} />
+          <div>
+            <AddToCartPanel product={product} />
+            {product.tryOn && (
+              <ButtonLink href={`/try-on/${product.slug}`} variant="secondary" className="mt-4 w-full">
+                Virtual Try-On
+              </ButtonLink>
+            )}
+          </div>
         </div>
 
         <section className="mt-14 grid rounded-[8px] border border-[#EAE5DF] bg-white/80 sm:grid-cols-2 lg:grid-cols-4">
